@@ -8,15 +8,16 @@ import { ForgotPasswordScreen } from '@/features/auth/ui/ForgotPasswordScreen';
 import { SuccessScreen } from '@/features/auth/ui/SuccessScreen';
 import { AuthStackParamList } from './types';
 import { NewPasswordScreen } from '@/features/auth/ui/NewPasswordScreen';
+import { ProductDetailScreen } from '@/features/product/productDetail/ui/ProductDetailScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export const AuthStack = () => {
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
+    <Stack.Navigator
+      screenOptions={{
         headerShown: false,
-        animation: 'slide_from_right' // Smooth modern transition
+        animation: 'slide_from_right', // Smooth modern transition
       }}
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
@@ -26,6 +27,7 @@ export const AuthStack = () => {
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="NewPassword" component={NewPasswordScreen} />
       <Stack.Screen name="Success" component={SuccessScreen} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   );
 };

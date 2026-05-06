@@ -1,14 +1,10 @@
 import React from 'react';
 import { AuthStack } from './AuthStack';
+import { AppStack } from './AppStack';
 
 export const RootNavigator = () => {
-  // Toggle this to true later once you have login logic
-  const isAuthenticated = false; 
-
+  const isAuthenticated = true; 
   if (!isAuthenticated) {
     return <AuthStack />;
-  }
-
-  // Placeholder for your main app tabs
-  return <AuthStack />; 
+  }  return <AppStack />; 
 };
