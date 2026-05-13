@@ -19,7 +19,7 @@ import { SuccessScreen } from '@/features/checkout/ui/SuccessScreen';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
-export const AppStack = () => {
+export const  AppStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={AppTabs} />

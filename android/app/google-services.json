@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "306999025235",
+    "project_id": "gason-c895f",
+    "storage_bucket": "gason-c895f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:306999025235:android:8175389ac35f3f34d470a6",
+        "android_client_info": {
+          "package_name": "com.gason.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf8RNtskJQw5VwqKrorBCupTQRRiR3EEU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

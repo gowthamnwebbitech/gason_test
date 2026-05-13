@@ -7,6 +7,7 @@ interface OutlineProps {
   title: string;
   onPress?: () => void;
   icon?: 'facebook' | 'google';
+  disabled?: boolean;
 }
 
 export const ButtonOutline = ({ title, onPress, icon }: OutlineProps) => {

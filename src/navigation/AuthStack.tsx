@@ -12,12 +12,15 @@ import { ProductDetailScreen } from '@/features/product/productDetail/ui/Product
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-export const AuthStack = () => {
+// Accept the isFirstLaunch prop (default to true just in case)
+export const AuthStack = ({ isFirstLaunch = true }: { isFirstLaunch?: boolean }) => {
   return (
     <Stack.Navigator
+      // This is the magic line: it decides where the stack begins
+      initialRouteName={isFirstLaunch ? 'Welcome' : 'Login'}
       screenOptions={{
         headerShown: false,
-        animation: 'slide_from_right', // Smooth modern transition
+        animation: 'slide_from_right', 
       }}
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />

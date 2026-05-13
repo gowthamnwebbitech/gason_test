@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTabsParamList } from './types';
 import { colors, shadows } from '@/theme';
 
-// Import all your actual screens!
+// Import all your actual screens!  
 import { HomeScreen } from '@/features/home/ui/HomeScreen';
 import { ProductListScreen } from '@/features/product/productList/ui/ProductListScreen';
 import { CartScreen } from '@/features/cart/ui/CartScreen';

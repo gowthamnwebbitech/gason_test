@@ -1,4 +1,4 @@
-package com.gasonnew
+package com.gason.app
 
 import android.app.Application
 import com.facebook.react.PackageList
