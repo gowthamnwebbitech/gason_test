@@ -6,7 +6,7 @@ import { ButtonPrimary } from '@/components/ButtonPrimary';
 import { spacing, typography } from '@/theme';
 import { images } from '@/assets';
 import { useAppDispatch } from '@/store';
-import { completeOnboarding } from '../store/login';
+import { completeOnboarding } from '../store';
 
 export const WelcomeScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();

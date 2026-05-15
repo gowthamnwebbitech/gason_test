@@ -12,7 +12,20 @@
           "package_name": "com.gason.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "306999025235-phqjf9dp28t9mhlkso8kmou2k4liufh3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gason.app",
+            "certificate_hash": "a2410a685c482c80e1f2ff1f3dfd3585328d8504"
+          }
+        },
+        {
+          "client_id": "306999025235-f6n8ob7kiq6cvgp1g05ovvmlr2m1c4t9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDf8RNtskJQw5VwqKrorBCupTQRRiR3EEU"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "306999025235-f6n8ob7kiq6cvgp1g05ovvmlr2m1c4t9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
