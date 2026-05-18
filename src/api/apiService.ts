@@ -23,3 +23,5 @@ export const apiService = {
     return response.data;
   },
 };
+
+export default apiService;

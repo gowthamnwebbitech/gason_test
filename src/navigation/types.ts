@@ -11,11 +11,11 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Signup: undefined;
-  OTP: undefined;
+  OTP: { type: 'signup' | 'forgot'; phone: string; userId?: string };
   ForgotPassword: undefined;
-  NewPassword: undefined;
-  Success: undefined;
-  ProductDetail: { product: Product };
+  NewPassword: { phone: string; otp: string };
+  AuthSuccess: undefined; // ✅ Renamed from Success
+  ProductDetail: { product: any };
 };
 
 // 2. Screens inside the Bottom Tab Bar
@@ -43,5 +43,5 @@ export type AppStackParamList = {
   Notifications: undefined;
   Security: undefined;
   Support: undefined;
-  Success: undefined;
+  OrderSuccess: undefined;
 };

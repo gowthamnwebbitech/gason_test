@@ -2,26 +2,23 @@ import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- Constants ---
-const ACCESS_SERVICE = 'gason_access';
-const REFRESH_SERVICE = 'gason_refresh';
+const AUTH_TOKEN_SERVICE = 'gason_auth_token';
 const HAS_LAUNCHED_KEY = '@gason_has_launched';
 
 // ==========================================
 // 1. ONBOARDING (WELCOME SCREEN) STORAGE
 // ==========================================
 
-// Checks if this is the user's very first time opening the app
 export const checkFirstLaunch = async (): Promise<boolean> => {
   try {
     const hasLaunched = await AsyncStorage.getItem(HAS_LAUNCHED_KEY);
-    return hasLaunched === null; // If null, it is their first time!
+    return hasLaunched === null;
   } catch (error) {
     console.error('Error reading launch status:', error);
-    return true; // Default to true so they see the Welcome screen on error
+    return true; 
   }
 };
 
-// Flags the app as launched so they skip the Welcome screen next time
 export const setAppLaunched = async (): Promise<void> => {
   try {
     await AsyncStorage.setItem(HAS_LAUNCHED_KEY, 'true');
@@ -34,28 +31,35 @@ export const setAppLaunched = async (): Promise<void> => {
 // 2. SECURE API TOKEN STORAGE (KEYCHAIN)
 // ==========================================
 
-// --- Access Token ---
-export const setAccessToken = async (token: string) => {
-  await Keychain.setGenericPassword('access', token, { service: ACCESS_SERVICE });
+export const setAccessToken = async (token: string): Promise<void> => {
+  try {
+    console.log('🔑 [Storage] Saving New Access Token:', token);
+    await Keychain.setGenericPassword('auth', token, { service: AUTH_TOKEN_SERVICE });
+  } catch (error) {
+    console.error('❌ [Storage] Error saving access token:', error);
+  }
 };
 
-export const getAccessToken = async () => {
-  const creds = await Keychain.getGenericPassword({ service: ACCESS_SERVICE });
-  return creds ? creds.password : null;
+export const getAccessToken = async (): Promise<string | null> => {
+  try {
+    const creds = await Keychain.getGenericPassword({ service: AUTH_TOKEN_SERVICE });
+    if (creds) {
+      console.log('🔓 [Storage] Retrieved Token Successfully');
+      return creds.password;
+    }
+    console.log('🔒 [Storage] No Token Found');
+    return null;
+  } catch (error) {
+    console.error('❌ [Storage] Error reading access token:', error);
+    return null;
+  }
 };
 
-// --- Refresh Token ---
-export const setRefreshToken = async (token: string) => {
-  await Keychain.setGenericPassword('refresh', token, { service: REFRESH_SERVICE });
-};
-
-export const getRefreshToken = async () => {
-  const creds = await Keychain.getGenericPassword({ service: REFRESH_SERVICE });
-  return creds ? creds.password : null;
-};
-
-// --- Clear Tokens ---
-export const clearAllTokens = async () => {
-  await Keychain.resetGenericPassword({ service: ACCESS_SERVICE });
-  await Keychain.resetGenericPassword({ service: REFRESH_SERVICE });
+export const clearAllTokens = async (): Promise<void> => {
+  try {
+    console.log('🗑️ [Storage] Clearing Tokens (User Logged Out)');
+    await Keychain.resetGenericPassword({ service: AUTH_TOKEN_SERVICE });
+  } catch (error) {
+    console.error('❌ [Storage] Error clearing tokens:', error);
+  }
 };

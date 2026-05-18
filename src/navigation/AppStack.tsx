@@ -8,7 +8,7 @@ import { SurveyScreen } from '@/features/service/Survey/ui/SurveyScreen';
 import { DeliveryScreen } from '@/features/service/delivery/ui/DeliveryScreen';
 import { EmergencyScreen } from '@/features/service/emergency/ui/EmergencyScreen';
 import { SettingsScreen } from '@/features/settings/ui/SettingsScreen';
-import { EditProfileScreen } from '@/features/editProfile/ui/EditProfileScreen';
+import { EditProfileScreen } from '@/features/profile/ui/EditProfileScreen';
 import { OrdersScreen } from '@/features/orders/ui/OrdersScreen';
 import { AddressesScreen } from '@/features/addresses/ui/AddressesScreen';
 import { PaymentsScreen } from '@/features/payments/ui/PaymentsScreen';

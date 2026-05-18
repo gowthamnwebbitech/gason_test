@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   TouchableOpacity,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { Header } from '@/components/header';
 import { colors, spacing, typography, radius, shadows } from '@/theme';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { logoutUser } from '@/features/auth/store';
+import { fetchProfile } from '../store/profileThunks';
 
 const menuItems = [
   { icon: 'box', label: 'My Orders', route: 'Orders' },
@@ -22,6 +26,18 @@ const menuItems = [
 ];
 
 export const ProfileScreen = ({ navigation }: any) => {
+  const dispatch = useAppDispatch();
+  const { data: profile, isLoading } = useAppSelector(state => state.profile);
+
+  // Fetch profile data when the screen mounts
+  useEffect(() => {
+    dispatch(fetchProfile());
+  }, [dispatch]);
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+  };
+
   return (
     <View style={styles.main}>
       <StatusBar
@@ -55,8 +71,36 @@ export const ProfileScreen = ({ navigation }: any) => {
               <Icon name="camera" size={14} color={colors.white} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.userName}>Mr. J. Bala Vijai Kumar</Text>
-          <Text style={styles.userId}>Gason ID: GAS-0982341</Text>
+
+          {isLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginTop: spacing.md }}
+            />
+          ) : (
+            <>
+              <Text style={styles.userName}>
+                {profile?.name || 'Loading...'}
+              </Text>
+
+              {/* Display Employee Code if available, otherwise fallback to Phone */}
+              {profile?.employee_code ? (
+                <Text style={styles.userId}>
+                  EMP Code: {profile.employee_code}
+                </Text>
+              ) : (
+                <Text style={styles.userId}>{profile?.phone || ''}</Text>
+              )}
+
+              {/* Display Distributor if associated */}
+              {profile?.distributor_name && (
+                <Text style={styles.distributorText}>
+                  Distributor: {profile.distributor_name}
+                </Text>
+              )}
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.editProfileBtn}
@@ -88,12 +132,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         <TouchableOpacity
           style={styles.logoutBtn}
           activeOpacity={0.7}
-          onPress={() =>
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Welcome' as any }], 
-            })
-          }
+          onPress={handleLogout}
         >
           <Icon name="log-out" size={20} color="#E74C3C" />
           <Text style={styles.logoutText}>Log Out</Text>
@@ -106,13 +145,13 @@ export const ProfileScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: colors.white },
+  main: { flex: 1, backgroundColor: '#FFFFFF' },
   scrollContent: { padding: spacing.lg, paddingBottom: 100 },
 
   // User Info
   userSection: {
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF',
     padding: spacing.xl,
     borderRadius: radius.lg,
     marginBottom: spacing.lg,
@@ -138,10 +177,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: '#FFFFFF',
   },
   userName: { ...typography.heading, fontFamily: 'Poppins-Bold', fontSize: 22 },
   userId: { ...typography.body, color: colors.textMuted, marginTop: 2 },
+  distributorText: {
+    ...typography.caption,
+    color: colors.primary,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+
   editProfileBtn: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -157,7 +203,7 @@ const styles = StyleSheet.create({
 
   // Menu List
   menuContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
@@ -193,7 +239,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF',
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,

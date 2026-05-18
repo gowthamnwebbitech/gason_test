@@ -15,7 +15,6 @@ export const WelcomeScreen = ({ navigation }: any) => {
   const handleGetStarted = async () => {
     // 1. Update Redux & Storage via Thunk
     await dispatch(completeOnboarding());
-    // 2. Safely transition
     navigation.replace('Login'); 
   };
 

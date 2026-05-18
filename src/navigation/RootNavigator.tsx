@@ -1,26 +1,35 @@
-import React from 'react';
+// src/navigation/RootNavigator.tsx
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthStack } from './AuthStack';
 import { AppStack } from './AppStack';
-import { useAuth } from './AuthContext'; 
+import { useAppSelector, useAppDispatch } from '@/store';
+import { initializeApp } from '@/features/auth/store';
 import { colors } from '@/theme';
 
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, isAppReady, isFirstLaunch } = useAppSelector((state) => state.auth);
 
-  // 1. Show a loading spinner while checking Keychain for tokens
-  if (isLoading) {
+  useEffect(() => {
+    dispatch(initializeApp());
+  }, [dispatch]);
+
+  // 2. Show loading while checking storage
+  if (!isAppReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
-  // 2. If not authenticated, show the AuthStack
+
+  // 3. Not authenticated? Show AuthStack and tell it if it's the first launch
   if (!isAuthenticated) {
-    return <AuthStack />;
+    return <AuthStack isFirstLaunch={isFirstLaunch} />;
   }
 
+  // 4. Authenticated? Automatically show the Dashboard (Home)
   return <AppStack />; 
 };
 
