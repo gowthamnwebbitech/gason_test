@@ -14,7 +14,7 @@ export type AuthStackParamList = {
   OTP: { type: 'signup' | 'forgot'; phone: string; userId?: string };
   ForgotPassword: undefined;
   NewPassword: { phone: string; otp: string };
-  AuthSuccess: undefined; // ✅ Renamed from Success
+  AuthSuccess: undefined;
   ProductDetail: { product: any };
 };
 
@@ -44,4 +44,5 @@ export type AppStackParamList = {
   Security: undefined;
   Support: undefined;
   OrderSuccess: undefined;
+  checkoutSuccess: undefined;
 };

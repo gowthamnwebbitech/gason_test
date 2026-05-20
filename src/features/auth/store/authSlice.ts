@@ -47,7 +47,17 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(completeOnboarding.fulfilled, (state, action) => { state.isFirstLaunch = action.payload; })
+      
+      .addCase(logoutUser.pending, (state) => {
+        state.isLoading = true; 
+      })
       .addCase(logoutUser.fulfilled, (state) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
       });

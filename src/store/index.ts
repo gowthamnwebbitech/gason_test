@@ -3,11 +3,12 @@ import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import { authReducer } from '@/features/auth/store';
 import profileReducer from '@/features/profile/store/profileSlice'; 
-
+import productReducer from '@/features/product/productList/store/productSlice';
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    profile: profileReducer, // <-- Add it to the store
+    profile: profileReducer, 
+    product: productReducer, 
   },
 });
 

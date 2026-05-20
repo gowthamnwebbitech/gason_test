@@ -36,7 +36,7 @@ export const  AppStack = () => {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Security" component={SecurityScreen} />
       <Stack.Screen name="Support" component={SupportScreen} />
-      <Stack.Screen name="Success" component={SuccessScreen} />
+      <Stack.Screen name="checkoutSuccess" component={SuccessScreen} />
     </Stack.Navigator>
   );
 };

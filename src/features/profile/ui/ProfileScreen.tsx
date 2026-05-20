@@ -27,15 +27,19 @@ const menuItems = [
 
 export const ProfileScreen = ({ navigation }: any) => {
   const dispatch = useAppDispatch();
-  const { data: profile, isLoading } = useAppSelector(state => state.profile);
+  const { data: profile, isLoading: isProfileLoading } = useAppSelector(state => state.profile);
+  
+  // Extract auth loading state specifically for the logout button
+  const { isLoading: isLoggingOut } = useAppSelector(state => state.auth);
 
-  // Fetch profile data when the screen mounts
   useEffect(() => {
     dispatch(fetchProfile());
   }, [dispatch]);
 
   const handleLogout = () => {
-    dispatch(logoutUser());
+    if (!isLoggingOut) {
+      dispatch(logoutUser());
+    }
   };
 
   return (
@@ -58,7 +62,6 @@ export const ProfileScreen = ({ navigation }: any) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Info Header */}
         <View style={styles.userSection}>
           <View style={styles.avatarContainer}>
             <Image
@@ -67,12 +70,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               }}
               style={styles.avatar}
             />
-            <TouchableOpacity style={styles.editAvatarBtn}>
+            <TouchableOpacity style={styles.editAvatarBtn} activeOpacity={0.8}>
               <Icon name="camera" size={14} color={colors.white} />
             </TouchableOpacity>
           </View>
 
-          {isLoading ? (
+          {isProfileLoading ? (
             <ActivityIndicator
               size="small"
               color={colors.primary}
@@ -84,7 +87,6 @@ export const ProfileScreen = ({ navigation }: any) => {
                 {profile?.name || 'Loading...'}
               </Text>
 
-              {/* Display Employee Code if available, otherwise fallback to Phone */}
               {profile?.employee_code ? (
                 <Text style={styles.userId}>
                   EMP Code: {profile.employee_code}
@@ -93,7 +95,6 @@ export const ProfileScreen = ({ navigation }: any) => {
                 <Text style={styles.userId}>{profile?.phone || ''}</Text>
               )}
 
-              {/* Display Distributor if associated */}
               {profile?.distributor_name && (
                 <Text style={styles.distributorText}>
                   Distributor: {profile.distributor_name}
@@ -105,12 +106,12 @@ export const ProfileScreen = ({ navigation }: any) => {
           <TouchableOpacity
             style={styles.editProfileBtn}
             onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.8}
           >
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Menu Links */}
         <View style={styles.menuContainer}>
           {menuItems.map((item, index) => (
             <TouchableOpacity
@@ -128,14 +129,21 @@ export const ProfileScreen = ({ navigation }: any) => {
           ))}
         </View>
 
-        {/* Logout Button */}
+        {/* UPGRADED LOGOUT BUTTON */}
         <TouchableOpacity
-          style={styles.logoutBtn}
+          style={[styles.logoutBtn, isLoggingOut && styles.logoutBtnDisabled]}
           activeOpacity={0.7}
           onPress={handleLogout}
+          disabled={isLoggingOut}
         >
-          <Icon name="log-out" size={20} color="#E74C3C" />
-          <Text style={styles.logoutText}>Log Out</Text>
+          {isLoggingOut ? (
+            <ActivityIndicator size="small" color="#E74C3C" />
+          ) : (
+            <>
+              <Icon name="log-out" size={20} color="#E74C3C" />
+              <Text style={styles.logoutText}>Log Out</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <Text style={styles.versionText}>App Version 1.0.0</Text>
@@ -245,6 +253,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F5B7B1',
     ...shadows.card,
+  },
+  logoutBtnDisabled: {
+    opacity: 0.6,
   },
   logoutText: {
     ...typography.bodyLarge,

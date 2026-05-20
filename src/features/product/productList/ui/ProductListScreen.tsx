@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useCallback, useState, memo } from 'react';
 import {
   View,
   Text,
@@ -7,51 +7,23 @@ import {
   ImageBackground,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
-  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '@/navigation/types'; 
+import { useDispatch, useSelector } from 'react-redux';
+
+import { AppDispatch, RootState } from '@/store';
+import { useDebounce } from '@/hooks/useDebounce';
+import { AuthStackParamList } from '@/navigation/types';
 import { Header } from '@/components/header';
-import { colors, spacing, typography, radius, shadows } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
+import { useResponsive } from '@/theme/layout'; 
 
-const { width } = Dimensions.get('window');
-// Calculate width perfectly for a 2-column grid with padding
-const CARD_WIDTH = (width - spacing.lg * 2 - spacing.md) / 2;
-
-// --- Gason Project Dummy Data ---
-const categories = ['All', 'Stoves', 'Cylinders', 'Accessories'];
-
-const products = [
-  { 
-    id: '1', category: 'Stoves', name: 'Premium Gas Stove', price: '₹3000', 
-    image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=500&auto=format&fit=crop' 
-  },
-  { 
-    id: '2', category: 'Cylinders', name: 'Domestic Cylinder 14.2kg', price: '₹1100', 
-    // Realistic metal tank placeholder
-    image: 'https://images.unsplash.com/photo-1605335198083-d2d46e3e5210?q=80&w=500&auto=format&fit=crop' 
-  },
-  { 
-    id: '3', category: 'Cylinders', name: 'Commercial Cylinder 19kg', price: '₹2200', 
-    image: 'https://images.unsplash.com/photo-1622322960899-702e1c9c4391?q=80&w=500&auto=format&fit=crop' 
-  },
-  { 
-    id: '4', category: 'Stoves', name: 'Classic 2 Burner', price: '₹1800', 
-    image: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=500&auto=format&fit=crop' 
-  },
-  { 
-    id: '5', category: 'Accessories', name: 'Safety Gas Regulator', price: '₹450', 
-    // Hardware/tool placeholder
-    image: 'https://images.unsplash.com/photo-1584269600519-112d08a72179?q=80&w=500&auto=format&fit=crop' 
-  },
-  { 
-    id: '6', category: 'Accessories', name: 'Flexible Hose Pipe 2m', price: '₹250', 
-    image: 'https://images.unsplash.com/photo-1644342531398-e7c653630f9a?q=80&w=500&auto=format&fit=crop' 
-  },
-];
+import { fetchProducts, searchProducts } from '../store/productThunks';
+import { setSearchQuery, resetProducts } from '../store/productSlice';
 
 type ProductListNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ProductDetail'>;
 
@@ -59,101 +31,183 @@ interface Props {
   navigation: ProductListNavigationProp;
 }
 
-export const ProductListScreen = ({ navigation }: Props) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-
-  // Filter logic: Matches Category AND Search Text
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  const renderProduct = ({ item }: any) => (
+// ------------------------------------------------------------------
+// PRO OPTIMIZATION 1: Memoized Product Card with PREMIUM DESIGN
+// ------------------------------------------------------------------
+const ProductCard = memo(({ 
+  item, 
+  cardWidth, 
+  onPress 
+}: { 
+  item: any; 
+  cardWidth: number; 
+  onPress: () => void 
+}) => {
+  return (
     <TouchableOpacity
       activeOpacity={0.9}
-      style={styles.productCard}
-      onPress={() => navigation.navigate('ProductDetail', { product: item })}
+      style={[styles.productCard, { width: cardWidth }]}
+      onPress={onPress}
     >
       <View style={styles.productImageContainer}>
         <ImageBackground
           source={{ uri: item.image }}
           style={styles.productImage}
+          resizeMode="cover"
         />
+        {/* Modern floating favorite button */}
         <TouchableOpacity style={styles.favoriteBtn} activeOpacity={0.7}>
-          <Icon name="heart" size={16} color={colors.textSecondary} />
+          <Icon name="heart" size={16} color="#000000" />
         </TouchableOpacity>
       </View>
+      
       <View style={styles.productInfo}>
-        <Text style={styles.productCategory}>{item.category}</Text>
-        <Text style={styles.productTitle} numberOfLines={1}>
+        <Text style={styles.productTitle} numberOfLines={2}>
           {item.name}
         </Text>
+        
         <View style={styles.productPriceRow}>
-          <Text style={styles.productPrice}>{item.price}</Text>
-          <TouchableOpacity style={styles.addBtn} activeOpacity={0.7}>
-            <Icon name="plus" size={16} color={colors.white} />
+          <Text style={styles.productPrice}>
+            {Number(item.price) > 0 ? `₹${item.price}` : 'Free'}
+          </Text>
+          
+          {/* Sleek, circular action button */}
+          <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
+            <Icon name="plus" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   );
+}, (prevProps, nextProps) => {
+  return prevProps.item.product_id === nextProps.item.product_id && 
+         prevProps.cardWidth === nextProps.cardWidth;
+});
+
+// ------------------------------------------------------------------
+// MAIN SCREEN
+// ------------------------------------------------------------------
+export const ProductListScreen = ({ navigation }: Props) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const { width, isTablet, isPortrait } = useResponsive();
+
+  const { items, loading, loadingMore, hasMore, offset, searchQuery } = useSelector(
+    (state: RootState) => state.product
+  );
+
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  
+  const numColumns = isTablet ? (isPortrait ? 3 : 4) : 2;
+  const CARD_WIDTH = (width - spacing.lg * 2 - (spacing.md * (numColumns - 1))) / numColumns;
+
+  // Handle Initial Load & Searching
+  useEffect(() => {
+    if (debouncedSearch.trim() !== '') {
+      dispatch(searchProducts({ query: debouncedSearch }));
+    } else {
+      dispatch(resetProducts());
+      dispatch(fetchProducts({ offset: 0 }));
+    }
+  }, [debouncedSearch, dispatch]);
+
+  // Handle Pull-to-Refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (debouncedSearch.trim() !== '') {
+      await dispatch(searchProducts({ query: debouncedSearch }));
+    } else {
+      dispatch(resetProducts());
+      await dispatch(fetchProducts({ offset: 0 }));
+    }
+    setRefreshing(false);
+  }, [debouncedSearch, dispatch]);
+
+  // Handle Infinite Scrolling
+  const handleLoadMore = useCallback(() => {
+    if (!loading && !loadingMore && hasMore && debouncedSearch === '') {
+      dispatch(fetchProducts({ offset }));
+    }
+  }, [loading, loadingMore, hasMore, offset, debouncedSearch, dispatch]);
+
+  // Render callback passed to FlatList
+  const renderItem = useCallback(({ item }: any) => {
+    return (
+      <ProductCard 
+        item={item} 
+        cardWidth={CARD_WIDTH} 
+        onPress={() => navigation.navigate('ProductDetail', { product: item })} 
+      />
+    );
+  }, [navigation, CARD_WIDTH]); 
+
+  const renderFooter = useCallback(() => {
+    if (!loadingMore) return <View style={styles.footerSpacer} />;
+    return (
+      <View style={styles.loaderFooter}>
+        <ActivityIndicator size="small" color="#000000" />
+      </View>
+    );
+  }, [loadingMore]);
+
+  const keyExtractor = useCallback((item: any, index: number) => {
+    return `${item.product_id}-${index}`;
+  }, []);
 
   return (
     <View style={styles.main}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* --- Search Header --- */}
       <Header
         variant="search"
-        searchPlaceholder="Search Gason products..."
+        searchPlaceholder="Search products..."
         searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        onRightPress={() => console.log('Filters Opened')}
+        onSearchChange={(text) => dispatch(setSearchQuery(text))}
         useTopInset={true}
+        style={styles.headerStyle}
       />
 
-      {/* --- Category Selector Pills --- */}
-      <View style={styles.categoriesContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesScroll}
-        >
-          {categories.map((category) => {
-            const isActive = activeCategory === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.categoryPill, isActive && styles.activeCategoryPill]}
-                onPress={() => setActiveCategory(category)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.categoryText, isActive && styles.activeCategoryText]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* --- Product Grid --- */}
-      {filteredProducts.length > 0 ? (
+      {loading && items.length === 0 && !refreshing ? (
+        <View style={styles.centerStage}>
+          <ActivityIndicator size="large" color="#000000" />
+        </View>
+      ) : items.length > 0 ? (
         <FlatList
-          data={filteredProducts}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          renderItem={renderProduct}
+          data={items}
+          keyExtractor={keyExtractor}
+          numColumns={numColumns}
+          key={numColumns} 
+          renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          
+          removeClippedSubviews={Platform.OS === 'android'}
+          initialNumToRender={10} 
+          maxToRenderPerBatch={10} 
+          windowSize={11} 
+          
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#000000"
+              colors={['#000000']} 
+              progressBackgroundColor="#FFFFFF" 
+            />
+          }
         />
       ) : (
-        <View style={styles.emptyState}>
-          <Icon name="search" size={48} color={colors.border} />
-          <Text style={styles.emptyStateText}>No products found.</Text>
+        <View style={styles.centerStage}>
+          <View style={styles.emptyIconContainer}>
+            <Icon name="package" size={42} color="#CCCCCC" />
+          </View>
+          <Text style={styles.emptyStateTitle}>No Products Found</Text>
+          <Text style={styles.emptyStateText}>Try adjusting your search terms.</Text>
         </View>
       )}
     </View>
@@ -161,111 +215,134 @@ export const ProductListScreen = ({ navigation }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: colors.white },
-  
-  // Category Selector Styles
-  categoriesContainer: {
-    paddingVertical: spacing.sm,
+  main: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF', 
+  },
+  headerStyle: { 
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.white,
+    borderBottomColor: '#F0F0F0',
   },
-  categoriesScroll: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+  listContent: { 
+    padding: spacing.lg, 
   },
-  categoryPill: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 8,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  columnWrapper: { 
+    justifyContent: 'space-between', 
+    // Increased bottom margin for better vertical spacing between the new cards
+    marginBottom: spacing.lg, 
   },
-  activeCategoryPill: {
-    backgroundColor: colors.black,
-    borderColor: colors.black,
-  },
-  categoryText: {
-    ...typography.body,
-    fontFamily: 'Inter_18pt-Medium',
-    color: colors.textSecondary,
-  },
-  activeCategoryText: {
-    color: colors.white,
-    fontFamily: 'Poppins-SemiBold',
-  },
-
-  // Grid Styles
-  listContent: { padding: spacing.lg, paddingBottom: 120 }, // Extra padding for bottom tab bar
-  columnWrapper: { justifyContent: 'space-between', marginBottom: spacing.md },
-
-  // Card Styles
+  
+  // -----------------------------------------
+  // NEW PREMIUM CARD STYLES
+  // -----------------------------------------
   productCard: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16, // Smoother, modern corners
+    // Removed the stark border, using a soft elegant shadow instead
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 5,
   },
   productImageContainer: {
     width: '100%',
-    height: 140,
-    backgroundColor: colors.surface,
+    height: 180, // Taller image area for a luxury feel
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
-  productImage: { width: '100%', height: '100%' },
+  productImage: { 
+    width: '100%', 
+    height: '100%',
+  },
   favoriteBtn: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: colors.white,
-    padding: 6,
-    borderRadius: radius.full,
-    ...shadows.card,
+    top: 12,
+    right: 12,
+    backgroundColor: '#FFFFFF', // Clean white
+    padding: 8,
+    borderRadius: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  productInfo: { padding: spacing.md },
-  productCategory: {
-    ...typography.caption,
-    color: colors.primary,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    marginBottom: 2,
+  productInfo: { 
+    padding: 16, // Generous padding
   },
   productTitle: {
     ...typography.body,
-    color: colors.textPrimary,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 13,
+    color: '#1A1A1A',
+    fontFamily: 'Poppins-Medium',
+    fontSize: 14, // Slightly larger for readability
+    lineHeight: 20,
+    minHeight: 40, 
   },
   productPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginTop: 12,
   },
-  productPrice: { ...typography.heading, color: colors.textPrimary, fontSize: 16 },
+  productPrice: { 
+    ...typography.heading, 
+    color: '#000000', 
+    fontSize: 16, // Bold, clear price
+    fontFamily: 'Poppins-Bold',
+    letterSpacing: -0.5,
+  },
   addBtn: {
-    backgroundColor: colors.black,
-    width: 32,
-    height: 32,
-    borderRadius: radius.md,
+    backgroundColor: '#000000', 
+    width: 40, // Perfect, larger circle
+    height: 40,
+    borderRadius: 20, 
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
-
-  // Empty State
-  emptyState: {
+  
+  // States
+  centerStage: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 100,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F8F8F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyStateTitle: {
+    ...typography.heading,
+    fontSize: 18,
+    color: '#000000',
+    marginBottom: 4,
   },
   emptyStateText: {
-    ...typography.bodyLarge,
-    color: colors.textMuted,
-    marginTop: spacing.md,
+    ...typography.body,
+    color: '#888888',
+    textAlign: 'center',
+  },
+  loaderFooter: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    paddingBottom: 120,
+  },
+  footerSpacer: {
+    height: 120,
   },
 });

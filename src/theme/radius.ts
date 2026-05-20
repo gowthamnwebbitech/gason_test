@@ -1,8 +1,17 @@
+import {
+  moderateScale,
+} from './responsive';
+
 export const radius = {
   none: 0,
-  sm: 6,
-  md: 12,
-  lg: 20,
-  xl: 30, // Buttons
+
+  sm: moderateScale(6),
+
+  md: moderateScale(12),
+
+  lg: moderateScale(20),
+
+  xl: moderateScale(30),
+
   full: 999,
 };

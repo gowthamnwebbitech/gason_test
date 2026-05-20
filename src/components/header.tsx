@@ -6,7 +6,9 @@ import {
   StyleSheet, 
   Platform, 
   TextInput, 
-  StatusBar 
+  StatusBar,
+  StyleProp, // Added this
+  ViewStyle  // Added this
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +28,7 @@ export interface HeaderProps {
   onBackPress?: () => void;
   onSearchChange?: (text: string) => void;
   useTopInset?: boolean; 
+  style?: StyleProp<ViewStyle>; // Added this line to fix the TypeScript error
 }
 
 export const Header = ({
@@ -39,12 +42,13 @@ export const Header = ({
   onRightPress,
   onBackPress,
   onSearchChange,
-  useTopInset = true, // FIX: Changed default to true so it NEVER merges with the status bar
+  useTopInset = true, 
+  style, // Destructured the new style prop here
 }: HeaderProps) => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   
-  // FIX: Bulletproof calculation for status bar height across iOS (Notch/Island) and Android (Hole-punch/Standard)
+  // Bulletproof calculation for status bar height across iOS (Notch/Island) and Android (Hole-punch/Standard)
   const topPadding = useTopInset 
     ? Math.max(insets.top, Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 20) 
     : 0;
@@ -122,7 +126,8 @@ export const Header = ({
   return (
     <LinearGradient
       colors={[colors.primaryLight, colors.white]} 
-      style={[styles.container, { paddingTop: topPadding + spacing.sm }]} // Added slight extra breathing room below the status bar
+      // Applied the custom style array here at the end so it overrides defaults if needed
+      style={[styles.container, { paddingTop: topPadding + spacing.sm }, style]} 
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
