@@ -1,422 +1,468 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback, memo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  ImageBackground,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  RefreshControl,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
-import { Header } from '@/components/header';
-import { colors, spacing, typography, radius, shadows } from '@/theme';
 import { useNavigation } from '@react-navigation/native';
 
-const { width } = Dimensions.get('window');
-const BANNER_WIDTH = width - spacing.lg * 2;
-const PRODUCT_CARD_WIDTH = width * 0.55;
+import { useAppDispatch, useAppSelector } from '@/store';
+import { fetchHomeData } from '../store/homeThunks';
+import { Header } from '@/components/header';
+import { ProductCard } from '@/components/ProductCard';
+import { colors, spacing, typography, radius, shadows, moderateScale, screenWidth } from '@/theme';
+import { Slider, Product, DigitalId } from '../store/homeTypes';
 
-// --- Dummy Data ---
-const banners = [
-  {
-    id: '1',
-    title: 'Special Offer',
-    subtitle: 'On your First 2 Bookings',
-    color1: '#1A1A2E',
-    color2: '#16213E',
-  },
-  {
-    id: '2',
-    title: 'Free Survey',
-    subtitle: 'Book your free survey today',
-    color1: colors.primary,
-    color2: colors.primaryDark,
-  },
+const BANNER_WIDTH = screenWidth() - spacing.lg * 2;
+const PRODUCT_CARD_WIDTH = screenWidth() * 0.42; 
+
+const SERVICES = [
+  { id: '1', name: 'Survey', icon: 'clipboard', color: colors.primary, route: 'Survey' },
+  { id: '2', name: 'Delivery', icon: 'truck', color: '#F39C12', route: 'Delivery' },
+  { id: '3', name: 'Emergency', icon: 'alert-triangle', color: '#E74C3C', route: 'Emergency' },
+  { id: '4', name: 'Support', icon: 'headphones', color: '#3498DB', route: 'Support' },
 ];
 
-const digitalCardData = {
-  name: 'Surendhar',
-  id: 'GAS - 0982 3410',
-  validThru: '12/28',
-};
+// ==========================================
+// MEMOIZED SUB-COMPONENTS
+// ==========================================
 
-const products = [
-  {
-    id: '1',
-    name: 'Premium Stove',
-    price: '₹3000',
-    image:
-      'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    name: 'Eco Burner 3',
-    price: '₹4500',
-    image:
-      'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    name: 'Smart Gas Hub',
-    price: '₹5500',
-    image:
-      'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=500&auto=format&fit=crop',
-  },
-];
+const BannerCarousel = memo(({ sliders }: { sliders: Slider[] }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-const services = [
-  {
-    id: '1',
-    name: 'Survey',
-    icon: 'clipboard',
-    color: colors.primary,
-    route: 'Survey',
-  },
-  {
-    id: '2',
-    name: 'Delivery',
-    icon: 'truck',
-    color: '#F39C12',
-    route: 'Delivery',
-  },
-  {
-    id: '3',
-    name: 'Emergency',
-    icon: 'alert-triangle',
-    color: '#E74C3C',
-    route: 'Emergency',
-  },
-  {
-    id: '4',
-    name: 'Support',
-    icon: 'headphones',
-    color: '#3498DB',
-    route: 'Support',
-  },
-];
+  // PRO OPTIMIZATION: Robust Auto-Slide that resets on manual interaction
+  useEffect(() => {
+    if (!sliders || sliders.length < 2) return;
+
+    const timer = setTimeout(() => {
+      let nextIndex = activeIndex + 1;
+      if (nextIndex >= sliders.length) nextIndex = 0;
+      
+      scrollViewRef.current?.scrollTo({
+        x: nextIndex * (BANNER_WIDTH + spacing.md),
+        animated: true,
+      });
+      
+      setActiveIndex(nextIndex);
+    }, 4500); 
+
+    return () => clearTimeout(timer);
+  }, [activeIndex, sliders]);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    setActiveIndex(index);
+  }, []);
+
+  if (!sliders?.length) return null;
+
+  return (
+    <View style={styles.sliderContainer}>
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+        snapToInterval={BANNER_WIDTH + spacing.md}
+        decelerationRate="fast"
+        contentContainerStyle={styles.sliderContent}
+      >
+        {sliders.map((banner) => (
+          <View key={banner.id.toString()} style={styles.bannerSlide}>
+            <Image source={{ uri: banner.image }} style={styles.bannerImage} resizeMode="cover" />
+            
+            {/* Sleeker, darker gradient for better text readability */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
+              style={styles.bannerOverlay}
+            >
+              <Text style={styles.bannerTitle} numberOfLines={2}>{banner.title}</Text>
+            </LinearGradient>
+          </View>
+        ))}
+      </ScrollView>
+      <View style={styles.pagination}>
+        {sliders.map((_, i) => (
+          <View key={i.toString()} style={[styles.dot, activeIndex === i && styles.activeDot]} />
+        ))}
+      </View>
+    </View>
+  );
+});
+
+const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
+  if (!digitalId) return null;
+
+  const formattedNumber = digitalId.cart_number.replace(/(.{4})/g, '$1 ').trim();
+
+  return (
+    <View style={styles.sectionContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Digital ID</Text>
+      </View>
+      
+      {/* Premium Titanium/Graphite Metal Finish */}
+      <LinearGradient
+        colors={['#1E1E24', '#2B2B36', '#121216']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.digitalCard}
+      >
+        {/* Holographic Light Sweep */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.05)']}
+          start={{ x: -0.2, y: -0.2 }}
+          end={{ x: 1.5, y: 1.5 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        <View style={styles.cardTopRow}>
+          <Text style={styles.cardBrandName}>
+            GASON <Text style={{ fontWeight: '300' }}>PREMIUM</Text>
+          </Text>
+          <Icon name="wifi" size={24} color="rgba(255,255,255,0.9)" style={{ transform: [{ rotate: '90deg' }] }} />
+        </View>
+
+        <View style={styles.cardChipRow}>
+          <LinearGradient colors={['#F5D76E', '#D4AF37', '#967113']} style={styles.emvChip}>
+            <View style={styles.chipLineContainer}>
+              <View style={styles.chipLine} />
+              <View style={styles.chipLine} />
+              <View style={styles.chipLineVertical} />
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View style={styles.cardMiddleRow}>
+          <Text style={styles.cardUserId}>{formattedNumber}</Text>
+        </View>
+
+        <View style={styles.cardBottomRow}>
+          <View>
+            <Text style={styles.cardDateLabel}>MEMBER NAME</Text>
+            <Text style={styles.cardUserName} numberOfLines={1}>{digitalId.name.toUpperCase()}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.cardDateLabel}>VALID THRU</Text>
+            <Text style={styles.cardDateValue}>{digitalId.expiry_date}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+});
+
+const ProductCarousel = memo(({ title, products, navigation }: { title: string; products: Product[]; navigation: any }) => {
+  if (!products?.length) return null;
+
+  const showBadge = title.toLowerCase().includes('featured');
+
+  return (
+    <View style={styles.sectionContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity style={styles.seeAllBtn} activeOpacity={0.7} onPress={() => navigation.navigate('Products')}>
+          <Text style={styles.seeAllText}>See All</Text>
+          <Icon name="chevron-right" size={16} color={colors.primary} style={{ marginTop: 2 }} />
+        </TouchableOpacity>
+      </View>
+      
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.productsScroll}
+        snapToInterval={PRODUCT_CARD_WIDTH + spacing.md}
+        decelerationRate="fast"
+      >
+        {products.map((item) => (
+          <ProductCard
+            key={item.id.toString()}
+            item={item}
+            cardWidth={PRODUCT_CARD_WIDTH}
+            showBadge={showBadge}
+            onPress={() => navigation.navigate('ProductDetail', { product: item })}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+});
+
+const ServicesGrid = memo(({ navigation }: { navigation: any }) => (
+  <View style={styles.sectionContainer}>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>Services</Text>
+    </View>
+    <View style={styles.servicesGrid}>
+      {SERVICES.map((service) => (
+        <TouchableOpacity
+          key={service.id}
+          activeOpacity={0.7}
+          style={styles.serviceItem}
+          onPress={() => navigation.navigate(service.route)}
+        >
+          {/* Luxury Minimalist Floating Circle */}
+          <View style={styles.serviceIconContainer}>
+            <Icon name={service.icon} size={24} color={service.color} />
+          </View>
+          <Text style={styles.serviceName}>{service.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+));
+
+// ==========================================
+// MAIN SCREEN
+// ==========================================
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const [activeBanner, setActiveBanner] = useState(0);
+  const dispatch = useAppDispatch();
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const index = event.nativeEvent.contentOffset.x / slideSize;
-    setActiveBanner(Math.round(index));
-  };
+  const { user } = useAppSelector((state) => state.auth);
+  const { data, isLoading, isRefreshing } = useAppSelector((state) => state.home);
+  console.log("user in home screen", user);
+  useEffect(() => {
+    dispatch(fetchHomeData(false));
+  }, [dispatch]);
+
+  const onRefresh = useCallback(() => {
+    dispatch(fetchHomeData(true));
+  }, [dispatch]);
+
+  if (isLoading && !data) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const primaryDigitalId = data?.digital_ids?.[0];
 
   return (
     <View style={styles.main}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent={true}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
 
-      {/* Header automatically handles top padding now */}
       <Header
         variant="main"
-        userName="Surendhar"
+        userName={user?.name || 'Guest'}
         onRightPress={() => console.log('Notifications')}
       />
 
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 40) + 80 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 4) - 2 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
       >
-        {/* --- 1. Banner Slider Section --- */}
-        <View style={styles.sliderContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleScroll}
-            snapToInterval={BANNER_WIDTH + spacing.md}
-            decelerationRate="fast"
-            contentContainerStyle={{
-              paddingHorizontal: spacing.lg,
-              gap: spacing.md,
-            }}
-          >
-            {banners.map(banner => (
-              <LinearGradient
-                key={banner.id}
-                colors={[banner.color1, banner.color2]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.bannerSlide}
-              >
-                <View style={styles.bannerContent}>
-                  <Text style={styles.bannerWelcome}>GASON INDIA</Text>
-                  <Text style={styles.bannerTitle}>{banner.title}</Text>
-                  <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
-                </View>
-                <Icon
-                  name="star"
-                  size={60}
-                  color="rgba(255,255,255,0.1)"
-                  style={styles.bannerIcon}
-                />
-              </LinearGradient>
-            ))}
-          </ScrollView>
-          <View style={styles.pagination}>
-            {banners.map((_, index) => (
-              <View
-                key={index}
-                style={[styles.dot, activeBanner === index && styles.activeDot]}
-              />
-            ))}
-          </View>
-        </View>
+        <BannerCarousel sliders={data?.sliders || []} />
+        
+        {primaryDigitalId && <RealisticDigitalId digitalId={primaryDigitalId} />}
+        
+        <ProductCarousel 
+          title="Featured Products" 
+          products={data?.featured_products || []} 
+          navigation={navigation} 
+        />
+        
+        <ProductCarousel 
+          title="Best Selling" 
+          products={data?.best_selling_products || []} 
+          navigation={navigation} 
+        />
 
-        {/* --- 2. Digital Card Section --- */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Digital ID</Text>
-        </View>
-        <LinearGradient
-          colors={[colors.primary, '#009B59']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.digitalCard}
-        >
-          {/* Card Decoration */}
-          <Icon
-            name="hexagon"
-            size={150}
-            color="rgba(255,255,255,0.05)"
-            style={styles.cardWatermark}
-          />
-
-          <View style={styles.cardTopRow}>
-            <View style={styles.cardLogo}>
-              <View style={styles.logoCircle}>
-                <Icon name="hexagon" size={16} color={colors.primary} />
-              </View>
-              <Text style={styles.cardBrandName}>GASON</Text>
-            </View>
-            <Icon name="cpu" size={28} color="rgba(255,255,255,0.9)" />{' '}
-            {/* Modern Chip Icon */}
-          </View>
-
-          <View style={styles.cardMiddleRow}>
-            <Text style={styles.cardUserId}>{digitalCardData.id}</Text>
-          </View>
-
-          <View style={styles.cardBottomRow}>
-            <View>
-              <Text style={styles.cardDateLabel}>CARDHOLDER</Text>
-              <Text style={styles.cardUserName}>{digitalCardData.name}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.cardDateLabel}>VALID THRU</Text>
-              <Text style={styles.cardDateValue}>
-                {digitalCardData.validThru}
-              </Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* --- 3. Products Section --- */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Products</Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('Products')} // Navigates to the ProductListScreen tab
-          >
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.productsScroll}
-          snapToInterval={PRODUCT_CARD_WIDTH + spacing.md}
-          decelerationRate="fast"
-        >
-          {products.map(item => (
-            <TouchableOpacity
-              key={item.id}
-              activeOpacity={0.9}
-              style={styles.productCard}
-              onPress={() =>
-                navigation.navigate('ProductDetail', {
-                  productId: item.id,
-                  product: item,
-                })
-              } // Navigates to ProductDetailScreen
-            >
-              <View style={styles.productImageContainer}>
-                <ImageBackground
-                  source={{ uri: item.image }}
-                  style={styles.productImage}
-                />
-              </View>
-              <View style={styles.productInfo}>
-                <Text style={styles.productTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.productPriceRow}>
-                  <Text style={styles.productPrice}>{item.price}</Text>
-                  <TouchableOpacity style={styles.addBtn} activeOpacity={0.7}>
-                    <Icon name="plus" size={16} color={colors.white} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* --- 4. Services Section --- */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Services</Text>
-        </View>
-        <View style={styles.servicesGrid}>
-          {services.map(service => (
-            <TouchableOpacity
-              key={service.id}
-              activeOpacity={0.7}
-              style={styles.serviceItem}
-              onPress={() => navigation.navigate(service.route)} // Add this line
-            >
-              <View
-                style={[
-                  styles.serviceIconContainer,
-                  { backgroundColor: service.color + '15' },
-                ]}
-              >
-                <Icon name={service.icon} size={28} color={service.color} />
-              </View>
-              <Text style={styles.serviceName}>{service.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ServicesGrid navigation={navigation} />
       </ScrollView>
     </View>
   );
 };
 
+// ==========================================
+// STYLES
+// ==========================================
+
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: colors.white }, // Enforced White Background
-  scrollContent: { paddingTop: spacing.md },
+  main: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF', // Strict White Background
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#FFFFFF' 
+  },
+  scrollContent: { 
+    paddingTop: spacing.md 
+  },
+  sectionContainer: {
+    marginBottom: spacing.xxl, 
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginHorizontal: spacing.lg,
-    marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
-  sectionTitle: {
-    ...typography.heading,
-    fontFamily: 'Poppins-Bold',
-    fontSize: 18,
+  sectionTitle: { 
+    ...typography.heading, 
+    color: colors.textPrimary,
+    fontSize: moderateScale(19), 
+    fontFamily: typography.screenTitle.fontFamily, // Bolder, premium look
   },
-  seeAllText: { ...typography.link, color: colors.primary },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  seeAllText: { 
+    ...typography.link,
+    color: colors.primary,
+    fontSize: moderateScale(13),
+    marginRight: 2,
+  },
 
-  // Slider Styles
-  sliderContainer: { marginBottom: spacing.md },
+  // Banner Styles
+  sliderContainer: { 
+    marginBottom: spacing.xl 
+  },
+  sliderContent: { 
+    paddingHorizontal: spacing.lg, 
+    gap: spacing.md 
+  },
   bannerSlide: {
     width: BANNER_WIDTH,
     borderRadius: radius.lg,
-    padding: spacing.xl,
-    justifyContent: 'center',
-    height: 160,
+    height: moderateScale(170), 
     overflow: 'hidden',
+    backgroundColor: colors.surface,
     ...shadows.card,
   },
-  bannerContent: { zIndex: 2 },
-  bannerWelcome: {
-    ...typography.caption,
+  bannerImage: { 
+    width: '100%', 
+    height: '100%', 
+    position: 'absolute' 
+  },
+  bannerOverlay: { 
+    flex: 1, 
+    justifyContent: 'flex-end', 
+    padding: spacing.xl 
+  },
+  bannerTitle: { 
+    ...typography.heading, 
     color: colors.white,
-    opacity: 0.8,
-    letterSpacing: 1.5,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: moderateScale(20),
+    lineHeight: moderateScale(26),
+    fontFamily: typography.screenTitle.fontFamily,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  bannerTitle: {
-    fontSize: 24,
-    color: colors.white,
-    fontFamily: 'Poppins-Bold',
-    marginVertical: 4,
+  pagination: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    marginTop: spacing.md 
   },
-  bannerSubtitle: { ...typography.caption, color: colors.white, opacity: 0.9 },
-  bannerIcon: {
-    position: 'absolute',
-    right: -15,
-    bottom: -15,
-    transform: [{ scale: 1.8 }],
+  dot: { 
+    width: 6, 
+    height: 6, 
+    borderRadius: radius.full, 
+    backgroundColor: colors.border, 
+    marginHorizontal: spacing.xs 
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: spacing.md,
+  activeDot: { 
+    backgroundColor: colors.primary, 
+    width: 24, // Pill shape for modern feel
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.border,
-    marginHorizontal: 4,
-  },
-  activeDot: { backgroundColor: colors.primary, width: 20 },
 
-  // Digital Card (Credit Card Style)
+  // Premium Digital ID Card Styles
   digitalCard: {
     marginHorizontal: spacing.lg,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.xl,
-    elevation: 10,
-    shadowColor: colors.primary,
+    ...shadows.card,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
     overflow: 'hidden',
-  },
-  cardWatermark: {
-    position: 'absolute',
-    right: -30,
-    top: -20,
-    opacity: 0.1,
-    transform: [{ rotate: '15deg' }],
+    aspectRatio: 1.586, 
   },
   cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  cardLogo: { flexDirection: 'row', alignItems: 'center' },
-  logoCircle: {
-    backgroundColor: colors.white,
-    padding: 4,
-    borderRadius: radius.sm,
   },
   cardBrandName: {
     color: colors.white,
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
-    marginLeft: spacing.sm,
-    letterSpacing: 1.5,
-  },
-  cardMiddleRow: { marginBottom: spacing.lg, marginTop: spacing.sm },
-  cardUserId: {
-    color: colors.white,
-    fontFamily: 'Inter_18pt-Medium',
-    fontSize: 22,
+    fontFamily: typography.screenTitle.fontFamily,
+    fontSize: moderateScale(15),
     letterSpacing: 3,
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+  },
+  cardChipRow: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  emvChip: {
+    width: 42,
+    height: 30,
+    borderRadius: radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 3,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.5)',
+  },
+  chipLineContainer: {
+    width: '100%',
+    height: '100%',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 4,
+    justifyContent: 'space-evenly',
+    position: 'relative',
+  },
+  chipLine: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: '100%',
+  },
+  chipLineVertical: {
+    position: 'absolute',
+    width: 1,
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    left: '50%',
+  },
+  cardMiddleRow: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cardUserId: {
+    color: '#F4F4F4',
+    fontFamily: 'Courier', 
+    fontSize: moderateScale(22),
+    letterSpacing: 4,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: -1, height: 1.5 },
+    textShadowRadius: 3,
   },
   cardBottomRow: {
     flexDirection: 'row',
@@ -424,63 +470,38 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   cardDateLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.6)',
+    ...typography.caption,
+    fontSize: moderateScale(9),
+    letterSpacing: 1.5,
   },
   cardUserName: {
-    color: colors.white,
-    fontFamily: 'Poppins-Bold',
-    fontSize: 16,
+    color: '#F4F4F4',
+    fontFamily: 'Courier',
+    fontSize: moderateScale(14),
+    fontWeight: 'bold',
     marginTop: 2,
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 2,
   },
   cardDateValue: {
-    color: colors.white,
-    fontFamily: 'Inter_18pt-Medium',
-    fontSize: 16,
+    color: '#F4F4F4',
+    fontFamily: 'Courier',
+    fontSize: moderateScale(14),
+    fontWeight: 'bold',
     marginTop: 2,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 2,
   },
 
-  // Modern Product Cards
-  productsScroll: { paddingHorizontal: spacing.lg, gap: spacing.md },
-  productCard: {
-    width: PRODUCT_CARD_WIDTH,
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
-    overflow: 'hidden',
-  },
-  productImageContainer: {
-    width: '100%',
-    height: 130,
-    backgroundColor: colors.surface,
-  },
-  productImage: { width: '100%', height: '100%' },
-  productInfo: { padding: spacing.md },
-  productTitle: {
-    ...typography.body,
-    color: colors.textPrimary,
-    fontFamily: 'Poppins-SemiBold',
-    fontSize: 14,
-  },
-  productPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  productPrice: { ...typography.heading, color: colors.primary, fontSize: 16 },
-  addBtn: {
-    backgroundColor: colors.black,
-    width: 32,
-    height: 32,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Carousel product spacing container
+  productsScroll: { 
+    paddingHorizontal: spacing.lg, 
+    gap: spacing.md ,
   },
 
   // Services Grid
@@ -491,19 +512,28 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     rowGap: spacing.lg,
   },
-  serviceItem: { alignItems: 'center', width: '22%' },
-  serviceIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  serviceItem: { 
+    alignItems: 'center', 
+    width: '22%' 
   },
-  serviceName: {
-    ...typography.caption,
-    fontFamily: 'Inter_18pt-Medium',
+  serviceIconContainer: { 
+    width: moderateScale(56), 
+    height: moderateScale(56), 
+    borderRadius: moderateScale(28), 
+    backgroundColor: '#FFFFFF', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: spacing.sm,
+    ...shadows.card,
+    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  serviceName: { 
+    ...typography.caption, 
     color: colors.textPrimary,
-    fontSize: 11,
+    fontFamily: typography.bodyLarge.fontFamily,
+    fontSize: moderateScale(11),
   },
 });

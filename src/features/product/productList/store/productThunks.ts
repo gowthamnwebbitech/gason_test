@@ -2,7 +2,6 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { apiService } from '@/api/apiService';
 import { ProductResponse } from './productType';
 
-// Fetch paginated products
 export const fetchProducts = createAsyncThunk<
   ProductResponse,
   { offset: number },

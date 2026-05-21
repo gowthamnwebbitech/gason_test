@@ -1,11 +1,9 @@
-import React, { useEffect, useCallback, useState, memo } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  ImageBackground,
-  TouchableOpacity,
   StatusBar,
   ActivityIndicator,
   RefreshControl,
@@ -19,11 +17,12 @@ import { AppDispatch, RootState } from '@/store';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AuthStackParamList } from '@/navigation/types';
 import { Header } from '@/components/header';
-import { colors, spacing, typography } from '@/theme';
+import { spacing, typography } from '@/theme';
 import { useResponsive } from '@/theme/layout'; 
 
 import { fetchProducts, searchProducts } from '../store/productThunks';
 import { setSearchQuery, resetProducts } from '../store/productSlice';
+import { ProductCard } from '@/components/ProductCard'; // <-- Import the shared card
 
 type ProductListNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ProductDetail'>;
 
@@ -31,62 +30,6 @@ interface Props {
   navigation: ProductListNavigationProp;
 }
 
-// ------------------------------------------------------------------
-// PRO OPTIMIZATION 1: Memoized Product Card with PREMIUM DESIGN
-// ------------------------------------------------------------------
-const ProductCard = memo(({ 
-  item, 
-  cardWidth, 
-  onPress 
-}: { 
-  item: any; 
-  cardWidth: number; 
-  onPress: () => void 
-}) => {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={[styles.productCard, { width: cardWidth }]}
-      onPress={onPress}
-    >
-      <View style={styles.productImageContainer}>
-        <ImageBackground
-          source={{ uri: item.image }}
-          style={styles.productImage}
-          resizeMode="cover"
-        />
-        {/* Modern floating favorite button */}
-        <TouchableOpacity style={styles.favoriteBtn} activeOpacity={0.7}>
-          <Icon name="heart" size={16} color="#000000" />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.productInfo}>
-        <Text style={styles.productTitle} numberOfLines={2}>
-          {item.name}
-        </Text>
-        
-        <View style={styles.productPriceRow}>
-          <Text style={styles.productPrice}>
-            {Number(item.price) > 0 ? `₹${item.price}` : 'Free'}
-          </Text>
-          
-          {/* Sleek, circular action button */}
-          <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
-            <Icon name="plus" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}, (prevProps, nextProps) => {
-  return prevProps.item.product_id === nextProps.item.product_id && 
-         prevProps.cardWidth === nextProps.cardWidth;
-});
-
-// ------------------------------------------------------------------
-// MAIN SCREEN
-// ------------------------------------------------------------------
 export const ProductListScreen = ({ navigation }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const [refreshing, setRefreshing] = useState(false);
@@ -102,7 +45,6 @@ export const ProductListScreen = ({ navigation }: Props) => {
   const numColumns = isTablet ? (isPortrait ? 3 : 4) : 2;
   const CARD_WIDTH = (width - spacing.lg * 2 - (spacing.md * (numColumns - 1))) / numColumns;
 
-  // Handle Initial Load & Searching
   useEffect(() => {
     if (debouncedSearch.trim() !== '') {
       dispatch(searchProducts({ query: debouncedSearch }));
@@ -112,7 +54,6 @@ export const ProductListScreen = ({ navigation }: Props) => {
     }
   }, [debouncedSearch, dispatch]);
 
-  // Handle Pull-to-Refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (debouncedSearch.trim() !== '') {
@@ -124,14 +65,12 @@ export const ProductListScreen = ({ navigation }: Props) => {
     setRefreshing(false);
   }, [debouncedSearch, dispatch]);
 
-  // Handle Infinite Scrolling
   const handleLoadMore = useCallback(() => {
     if (!loading && !loadingMore && hasMore && debouncedSearch === '') {
       dispatch(fetchProducts({ offset }));
     }
   }, [loading, loadingMore, hasMore, offset, debouncedSearch, dispatch]);
 
-  // Render callback passed to FlatList
   const renderItem = useCallback(({ item }: any) => {
     return (
       <ProductCard 
@@ -152,7 +91,8 @@ export const ProductListScreen = ({ navigation }: Props) => {
   }, [loadingMore]);
 
   const keyExtractor = useCallback((item: any, index: number) => {
-    return `${item.product_id}-${index}`;
+    const id = item.product_id || item.id || index;
+    return `${id}-${index}`;
   }, []);
 
   return (
@@ -185,12 +125,10 @@ export const ProductListScreen = ({ navigation }: Props) => {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={renderFooter}
-          
           removeClippedSubviews={Platform.OS === 'android'}
           initialNumToRender={10} 
           maxToRenderPerBatch={10} 
           windowSize={11} 
-          
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -229,87 +167,8 @@ const styles = StyleSheet.create({
   },
   columnWrapper: { 
     justifyContent: 'space-between', 
-    // Increased bottom margin for better vertical spacing between the new cards
     marginBottom: spacing.lg, 
   },
-  
-  // -----------------------------------------
-  // NEW PREMIUM CARD STYLES
-  // -----------------------------------------
-  productCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16, // Smoother, modern corners
-    // Removed the stark border, using a soft elegant shadow instead
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  productImageContainer: {
-    width: '100%',
-    height: 180, // Taller image area for a luxury feel
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  productImage: { 
-    width: '100%', 
-    height: '100%',
-  },
-  favoriteBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#FFFFFF', // Clean white
-    padding: 8,
-    borderRadius: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  productInfo: { 
-    padding: 16, // Generous padding
-  },
-  productTitle: {
-    ...typography.body,
-    color: '#1A1A1A',
-    fontFamily: 'Poppins-Medium',
-    fontSize: 14, // Slightly larger for readability
-    lineHeight: 20,
-    minHeight: 40, 
-  },
-  productPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  productPrice: { 
-    ...typography.heading, 
-    color: '#000000', 
-    fontSize: 16, // Bold, clear price
-    fontFamily: 'Poppins-Bold',
-    letterSpacing: -0.5,
-  },
-  addBtn: {
-    backgroundColor: '#000000', 
-    width: 40, // Perfect, larger circle
-    height: 40,
-    borderRadius: 20, 
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  
-  // States
   centerStage: {
     flex: 1,
     alignItems: 'center',

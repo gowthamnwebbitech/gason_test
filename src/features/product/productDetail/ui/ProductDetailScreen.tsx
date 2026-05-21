@@ -14,18 +14,17 @@ import Icon from 'react-native-vector-icons/Feather';
 import { Header } from '@/components/header';
 import { colors, spacing, typography, radius, shadows } from '@/theme';
 
-// --- Dummy Detail Data ---
 const productDetails = {
   name: 'Eco Burner 3 Premium Stove',
-  price: '₹4500',
+  price: '4500', 
   rating: '4.8',
   reviews: '124',
   description: 'Experience high-efficiency cooking with our Eco Burner 3 Premium Stove. Designed with toughened glass and rust-proof brass burners, it ensures even heat distribution and long-lasting durability. Perfect for modern kitchens.',
   images: [
-    'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=500&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=500&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=500&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=500&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=800&auto=format&fit=crop', // Sleek Stove
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800&auto=format&fit=crop', // Modern Kitchen View
+    'https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=800&auto=format&fit=crop', // Brass Burner Detail
+    'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?q=80&w=800&auto=format&fit=crop', // Appliance texture
   ],
 };
 

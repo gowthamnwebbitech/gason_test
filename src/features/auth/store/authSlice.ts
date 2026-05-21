@@ -22,22 +22,34 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // --- APP INITIALIZATION ---
       .addCase(initializeApp.fulfilled, (state, action) => {
         state.isAuthenticated = action.payload.isAuthenticated;
         state.isFirstLaunch = action.payload.isFirstLaunch;
-        state.isAppReady = true;
+        state.user = action.payload.user; // ✅ REHYDRATE USER FROM STORAGE
+        state.isAppReady = true;          // ✅ UNLOCK APP RENDERING
       })
-      .addCase(loginUser.pending, (state) => { state.isLoading = true; state.error = null; })
+      
+      // --- LOGIN ---
+      .addCase(loginUser.pending, (state) => { 
+        state.isLoading = true; 
+        state.error = null; 
+      })
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload;
+        state.user = action.payload;      // ✅ SET NEW USER ON LOGIN
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      .addCase(signupUser.pending, (state) => { state.isLoading = true; state.error = null; })
+
+      // --- SIGNUP ---
+      .addCase(signupUser.pending, (state) => { 
+        state.isLoading = true; 
+        state.error = null; 
+      })
       .addCase(signupUser.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload; 
@@ -46,20 +58,25 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      .addCase(completeOnboarding.fulfilled, (state, action) => { state.isFirstLaunch = action.payload; })
+
+      // --- ONBOARDING ---
+      .addCase(completeOnboarding.fulfilled, (state, action) => { 
+        state.isFirstLaunch = action.payload; 
+      })
       
+      // --- LOGOUT ---
       .addCase(logoutUser.pending, (state) => {
         state.isLoading = true; 
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.isLoading = false;
         state.isAuthenticated = false;
-        state.user = null;
+        state.user = null;               
       })
       .addCase(logoutUser.rejected, (state) => {
         state.isLoading = false;
         state.isAuthenticated = false;
-        state.user = null;
+        state.user = null;              
       });
   },
 });

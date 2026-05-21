@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // --- Constants ---
 const AUTH_TOKEN_SERVICE = 'gason_auth_token';
 const HAS_LAUNCHED_KEY = '@gason_has_launched';
+const USER_PROFILE_KEY = '@gason_user_profile';
 
 // ==========================================
 // 1. ONBOARDING (WELCOME SCREEN) STORAGE
@@ -61,5 +62,35 @@ export const clearAllTokens = async (): Promise<void> => {
     await Keychain.resetGenericPassword({ service: AUTH_TOKEN_SERVICE });
   } catch (error) {
     console.error('❌ [Storage] Error clearing tokens:', error);
+  }
+};
+
+// ==========================================
+// 3. USER PROFILE STORAGE (ASYNC STORAGE)
+// ==========================================
+
+export const setLocalUser = async (user: any): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.error('❌ [Storage] Error saving user profile:', error);
+  }
+};
+
+export const getLocalUser = async (): Promise<any | null> => {
+  try {
+    const data = await AsyncStorage.getItem(USER_PROFILE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('❌ [Storage] Error reading user profile:', error);
+    return null;
+  }
+};
+
+export const removeLocalUser = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(USER_PROFILE_KEY);
+  } catch (error) {
+    console.error('❌ [Storage] Error removing user profile:', error);
   }
 };

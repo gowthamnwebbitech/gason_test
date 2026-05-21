@@ -14,7 +14,7 @@ import { AppStackParamList } from '@/navigation/types';
 
 type SuccessScreenNavigationProp = NativeStackNavigationProp<
   AppStackParamList,
-  'Success'
+  'checkoutSuccess'
 >;
 
 interface Props {

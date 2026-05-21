@@ -10,8 +10,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 import { Header } from '@/components/header';
 import { colors, spacing, typography, radius, shadows } from '@/theme';
+import { AppStackParamList } from '@/navigation/types'; // Adjust path if needed
+
+// --- Strictly type the navigation prop ---
+type CheckoutNavigationProp = NativeStackNavigationProp<AppStackParamList, 'Checkout'>;
+
+interface Props {
+  navigation: CheckoutNavigationProp;
+}
 
 // --- Dummy Data ---
 const orderItems = [
@@ -25,7 +35,7 @@ const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'truck' },
 ];
 
-export const CheckoutScreen = ({ navigation }: any) => {
+export const CheckoutScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const [selectedPayment, setSelectedPayment] = useState('upi');
 
@@ -36,7 +46,7 @@ export const CheckoutScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.main}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
       
       <Header 
         variant="standard" 
@@ -151,7 +161,8 @@ export const CheckoutScreen = ({ navigation }: any) => {
         <TouchableOpacity 
           style={styles.placeOrderBtn} 
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('Success')} // Assuming you have a Success screen in AuthStack/AppStack
+          // FIX: Explicitly match the lowercase registered route exactly
+          onPress={() => navigation.navigate('checkoutSuccess')} 
         >
           <Text style={styles.placeOrderText}>Place Order</Text>
           <Icon name="check-circle" size={20} color={colors.white} />
@@ -161,9 +172,19 @@ export const CheckoutScreen = ({ navigation }: any) => {
   );
 };
 
+// ==========================================
+// STYLES
+// ==========================================
+
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: colors.white },
-  scrollContent: { padding: spacing.lg, paddingBottom: 120 },
+  main: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF' // Strict White Rule 
+  },
+  scrollContent: { 
+    padding: spacing.lg, 
+    paddingBottom: 120 
+  },
   
   sectionHeader: { marginBottom: spacing.sm, marginTop: spacing.md },
   sectionTitle: { ...typography.heading, fontFamily: 'Poppins-Bold', fontSize: 18 },
