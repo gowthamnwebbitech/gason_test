@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,20 @@ import {
   Platform,
   Keyboard,
   ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Feather';
 
 import { Input } from '@/components/Input';
 import { ButtonPrimary } from '@/components/ButtonPrimary';
-import { colors, spacing, typography } from '@/theme';
+import { colors, spacing, typography, radius } from '@/theme';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { loginUser } from '../store';
 
-// 1. Define specific errors for field-level validation
 interface FormErrors {
   phone?: string;
   password?: string;
@@ -26,25 +30,60 @@ interface FormErrors {
 export const LoginScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-
-  // Pull global loading and API errors from Redux
-  const { isLoading, error: globalError } = useAppSelector((state: any) => state.auth);
+  const { isLoading, error: globalError } = useAppSelector(
+    (state: any) => state.auth,
+  );
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Track field-specific errors, API errors, and local success state
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Field-level Validation Engine
+  // --- STAGGERED PREMIUM ANIMATIONS ---
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
+  const footerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(formAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(footerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+    ]).start();
+  }, [headerAnim, formAnim, footerAnim]);
+
+  const getTransform = (anim: Animated.Value) => {
+    return [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [40, 0],
+        }),
+      },
+    ];
+  };
+
   const validateForm = (): boolean => {
     Keyboard.dismiss();
     let isValid = true;
     let newErrors: FormErrors = {};
 
-    // Validate Phone
     const phoneRegex = /^[0-9]{10}$/;
     if (!phone.trim()) {
       newErrors.phone = 'Mobile Number is required.';
@@ -54,7 +93,6 @@ export const LoginScreen = ({ navigation }: any) => {
       isValid = false;
     }
 
-    // Validate Password
     if (!password.trim()) {
       newErrors.password = 'Password is required.';
       isValid = false;
@@ -66,136 +104,164 @@ export const LoginScreen = ({ navigation }: any) => {
 
   const handleSignIn = () => {
     if (validateForm()) {
-      setApiError(null); // Clear old API errors before trying again
+      setApiError(null);
 
       dispatch(loginUser({ phone: phone.trim(), password }))
         .unwrap()
-        .then((user) => {
+        .then(() => {
           setIsSuccess(true);
+          Toast.show({
+            type: 'success',
+            text1: 'Login Successful',
+            text2: 'Welcome back to Gason!',
+          });
         })
         .catch((err: any) => {
-          setApiError(err || 'Incorrect mobile number or password.');
+          const errMsg = err || 'Incorrect mobile number or password.';
+          setApiError(errMsg);
+          Toast.show({
+            type: 'error',
+            text1: 'Login Failed',
+            text2: errMsg,
+          });
         });
     }
   };
 
-  // Helper to clear a specific field's error instantly when the user types
   const clearError = (field: keyof FormErrors) => {
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
     if (apiError) setApiError(null);
   };
 
-  // Combine API errors and Global Redux errors for display
   const displayGlobalError = apiError || globalError;
 
   return (
-    <View style={[styles.main, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <View style={styles.main}>
+      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
+      <LinearGradient
+        colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentTop}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        colors={[colors.primary + '0A', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentBottom}
+        start={{ x: 1, y: 1 }}
+        end={{ x: 0, y: 0 }}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View>
+          {/* 1. ANIMATED HEADER */}
+          <Animated.View style={{ opacity: headerAnim, transform: getTransform(headerAnim) }}>
             <View style={styles.header}>
-              <Text style={styles.welcome}>Welcome back!</Text>
-              <Text style={styles.title}>Sign In</Text>
+              <View style={styles.badgeContainer}>
+                <View style={styles.badgeDot} />
+                <Text style={styles.badgeText}>Welcome Back</Text>
+              </View>
+              <Text style={styles.title}>Sign in to{'\n'}your account</Text>
+              <Text style={styles.subtitle}>Enter your details to access your dashboard.</Text>
             </View>
+          </Animated.View>
 
+          {/* 2. ANIMATED FORM */}
+          <Animated.View style={{ opacity: formAnim, transform: getTransform(formAnim), flex: 1 }}>
             <View style={styles.form}>
-              
-              {/* --- PHONE INPUT --- */}
               <View style={styles.inputGroup}>
                 <Input
                   placeholder="Mobile Number"
                   keyboardType="phone-pad"
-                  autoCapitalize="none"
                   value={phone}
-                  onChangeText={(text: string) => {
-                    setPhone(text.replace(/[^0-9]/g, '')); // Strictly numbers
+                  onChangeText={text => {
+                    setPhone(text.replace(/[^0-9]/g, ''));
                     clearError('phone');
                   }}
                   editable={!isLoading && !isSuccess}
                   maxLength={10}
-                  hasError={!!errors.phone} // Triggers the red border natively
+                  hasError={!!errors.phone}
                 />
                 {errors.phone && (
-                  <View style={styles.errorTextWrapper}>
-                    <Text style={styles.fieldErrorText}>{errors.phone}</Text>
-                  </View>
+                  <Text style={styles.fieldErrorText}>{errors.phone}</Text>
                 )}
               </View>
 
-              {/* --- PASSWORD INPUT --- */}
               <View style={styles.inputGroup}>
                 <Input
                   placeholder="Password"
                   isPassword={true}
                   value={password}
-                  onChangeText={(text: string) => {
+                  onChangeText={text => {
                     setPassword(text);
                     clearError('password');
                   }}
                   editable={!isLoading && !isSuccess}
-                  hasError={!!errors.password} // Triggers the red border natively
+                  hasError={!!errors.password}
                 />
                 {errors.password && (
-                  <View style={styles.errorTextWrapper}>
-                    <Text style={styles.fieldErrorText}>{errors.password}</Text>
-                  </View>
+                  <Text style={styles.fieldErrorText}>{errors.password}</Text>
                 )}
               </View>
 
-              {/* --- GLOBAL / API ERROR CONTAINER --- */}
               {displayGlobalError ? (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>• {displayGlobalError}</Text>
+                  <Icon name="alert-circle" size={16} color={colors.error} style={{ marginRight: spacing.sm }} />
+                  <Text style={styles.errorText}>{displayGlobalError}</Text>
                 </View>
               ) : null}
 
-              <TouchableOpacity 
-                onPress={() => navigation.navigate('ForgotPassword')} 
-                style={styles.forgotBtn} 
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword')}
+                style={styles.forgotBtn}
                 disabled={isLoading || isSuccess}
-                activeOpacity={0.7}
+                activeOpacity={0.6}
               >
-                <Text style={styles.forgotText}>Forget Password?</Text>
+                <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
 
-          <View style={styles.bottomSection}>
-            {/* 3. DYNAMIC BUTTON TEXT FOR SUCCESS */}
-            <ButtonPrimary 
-              title={
-                isSuccess 
-                  ? 'Welcome Back! ✓' 
-                  : isLoading 
-                    ? 'Signing in...' 
+          {/* 3. ANIMATED FOOTER */}
+          <Animated.View style={{ opacity: footerAnim, transform: getTransform(footerAnim) }}>
+            <View style={styles.bottomSection}>
+              <ButtonPrimary
+                title={
+                  isSuccess
+                    ? 'Welcome Back! ✓'
+                    : isLoading
+                    ? 'Signing in...'
                     : 'Sign In'
-              } 
-              onPress={handleSignIn} 
-              disabled={isLoading || isSuccess} 
-            />
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Don’t have an account?{' '}
-                <Text 
-                  style={[styles.link, (isLoading || isSuccess) && styles.disabledLink]} 
-                  onPress={() => !(isLoading || isSuccess) && navigation.navigate('Signup')}
-                >
-                  Sign Up
+                }
+                onPress={handleSignIn}
+                disabled={isLoading || isSuccess}
+              />
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  Don’t have an account?{' '}
                 </Text>
-              </Text>
+                <TouchableOpacity 
+                  onPress={() => !(isLoading || isSuccess) && navigation.navigate('Signup')}
+                  disabled={isLoading || isSuccess}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.link, (isLoading || isSuccess) && styles.disabledLink]}>
+                    Create one
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -205,85 +271,124 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF' // Strict white background maintained
+    backgroundColor: '#FFFFFF', // Strict pure white background constraint met
   },
-  keyboardView: { 
-    flex: 1 
+  glowAccentTop: {
+    position: 'absolute',
+    top: -150,
+    right: -100,
+    width: 400,
+    height: 400,
+    borderRadius: radius.full,
   },
-  scrollContent: { 
-    flexGrow: 1, 
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, 
-    paddingBottom: spacing.xxl, 
+  glowAccentBottom: {
+    position: 'absolute',
+    bottom: -200,
+    left: -150,
+    width: 450,
+    height: 450,
+    borderRadius: radius.full,
+  },
+  keyboardView: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
   },
   header: { 
-    marginTop: spacing.xl, 
-    marginBottom: spacing.xl 
+    marginBottom: spacing.xxl 
   },
-  welcome: { 
-    ...typography.sectionTitle, 
-    color: colors.primary 
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight, 
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.xl,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+    marginRight: spacing.xs,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   title: { 
-    ...typography.screenTitle 
-  },
-  form: { 
-    gap: spacing.md 
-  },
-
-  // --- FIELD ERROR STYLING ---
-  inputGroup: {
+    ...typography.screenTitle,
+    fontSize: 36, 
+    lineHeight: 44,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },
-  errorTextWrapper: {
-    marginTop: 4,
-    marginLeft: 4,
+  subtitle: {
+    ...typography.bodyLarge,
+    color: colors.textMuted,
+  },
+  form: { 
+    gap: spacing.md,
+  },
+  inputGroup: { 
+    marginBottom: spacing.xs 
   },
   fieldErrorText: {
-    color: colors.error || '#FF3B30', // Guaranteed Red Fallback
-    ...typography.caption,
+    ...typography.caption, 
+    color: colors.error, 
     fontWeight: '500',
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
   },
-
-  // --- GLOBAL ERROR STYLING ---
-  errorContainer: { 
-    backgroundColor: '#FFEFEF', 
-    padding: spacing.sm, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#FFD6D6',
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#FFE1E1',
     marginTop: spacing.xs,
   },
-  errorText: { 
-    color: colors.error || '#FF3B30', // Guaranteed Red Fallback
+  errorText: {
     ...typography.caption, 
-    fontWeight: '500' 
+    color: colors.error, 
+    fontWeight: '600',
+    flex: 1,
   },
-
-  // --- INTERACTIVE ELEMENTS ---
   forgotBtn: { 
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start', 
     paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
   },
   forgotText: { 
-    ...typography.body, 
-    color: colors.textPrimary 
+    ...typography.bodyLarge, 
+    color: colors.textPrimary, 
+    fontWeight: '700',
   },
   bottomSection: { 
-    gap: spacing.xl,
-    marginTop: spacing.xl,
+    gap: spacing.xl, 
+    marginTop: spacing.xxl 
   },
   footer: { 
-    alignItems: 'center' 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footerText: { 
     ...typography.body, 
     color: colors.textSecondary 
   },
   link: { 
-    ...typography.link, 
-    fontWeight: 'bold', 
-    color: colors.black 
+    ...typography.body, 
+    fontWeight: '700', 
+    color: colors.primary,
   },
   disabledLink: { 
     color: colors.textMuted 

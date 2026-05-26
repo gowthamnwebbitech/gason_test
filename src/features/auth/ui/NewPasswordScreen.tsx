@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,20 @@ import {
   Platform,
   ScrollView,
   Keyboard,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Input } from '@/components/Input';
+import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Feather';
+
 import { ButtonPrimary } from '@/components/ButtonPrimary';
-import { colors, spacing, typography } from '@/theme';
+import { Input } from '@/components/Input';
+import { colors, spacing, typography, radius } from '@/theme';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { resetPassword } from '../store';
 
-// 1. Define error state shape for field-level validation
 interface FormErrors {
   password?: string;
   confirmPassword?: string;
@@ -24,37 +29,66 @@ interface FormErrors {
 export const NewPasswordScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  
-  // Pull global loading and API errors from Redux
-  const { isLoading, error: globalError } = useAppSelector((state: any) => state.auth);
+  const { isLoading, error: globalError } = useAppSelector(
+    (state: any) => state.auth,
+  );
 
-  // Grab the phone and OTP passed from the previous screens
   const phone = route?.params?.phone || '';
   const otp = route?.params?.otp || '';
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // Track field-specific errors and API errors separately
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Formik-style Validation Engine
+  // --- STAGGERED PREMIUM ANIMATIONS ---
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
+  const footerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(formAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(footerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+    ]).start();
+  }, [headerAnim, formAnim, footerAnim]);
+
+  const getTransform = (anim: Animated.Value) => {
+    return [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [40, 0],
+        }),
+      },
+    ];
+  };
+
   const validateForm = (): boolean => {
     Keyboard.dismiss();
     let isValid = true;
     let newErrors: FormErrors = {};
 
-    // Validate Password
-    if (!password) {
-      newErrors.password = 'Password is required.';
-      isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long.';
+    if (!password || password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters.';
       isValid = false;
     }
-
-    // Validate Confirm Password
     if (!confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your new password.';
       isValid = false;
@@ -69,114 +103,142 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
 
   const handleConfirm = () => {
     if (validateForm()) {
-      setApiError(null); // Clear previous API errors
+      setApiError(null);
 
-      // Call Laravel API: /member/reset-password
       dispatch(resetPassword({ phone, otp, password }))
         .unwrap()
         .then(() => {
-          navigation.navigate('AuthSuccess'); // Uses the correctly mapped Success Screen
+          Toast.show({
+            type: 'success',
+            text1: 'Password Updated',
+            text2: 'Your password has been changed successfully.',
+          });
+          navigation.navigate('AuthSuccess');
         })
         .catch((err: any) => {
-          setApiError(err || 'Failed to reset password. Please try again.');
+          const errMsg = err || 'Failed to reset password. Please try again.';
+          setApiError(errMsg);
+          Toast.show({
+            type: 'error',
+            text1: 'Reset Failed',
+            text2: errMsg,
+          });
         });
     }
   };
 
-  // Helper to clear specific field errors instantly as the user types
   const clearError = (field: keyof FormErrors) => {
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
     if (apiError) setApiError(null);
   };
 
   const displayGlobalError = apiError || globalError;
 
   return (
-    <View
-      style={[
-        styles.main,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
-    >
+    <View style={styles.main}>
+      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
+      <LinearGradient
+        colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentTop}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        colors={[colors.primary + '0A', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentBottom}
+        start={{ x: 1, y: 1 }}
+        end={{ x: 0, y: 0 }}
+      />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View>
+          {/* 1. ANIMATED HEADER */}
+          <Animated.View style={{ opacity: headerAnim, transform: getTransform(headerAnim) }}>
             <View style={styles.header}>
-              <Text style={styles.title}>New Password</Text>
+              <View style={styles.badgeContainer}>
+                <View style={styles.badgeDot} />
+                <Text style={styles.badgeText}>Secure Account</Text>
+              </View>
+              <Text style={styles.title}>Create new{'\n'}password</Text>
               <Text style={styles.subtitle}>
-                Your password must be different from previous passwords.
+                Your new password must be different from previous passwords to ensure security.
               </Text>
             </View>
+          </Animated.View>
 
+          {/* 2. ANIMATED FORM */}
+          <Animated.View style={{ opacity: formAnim, transform: getTransform(formAnim), flex: 1 }}>
             <View style={styles.form}>
-              
-              {/* --- NEW PASSWORD INPUT --- */}
               <View style={styles.inputGroup}>
                 <Input
                   placeholder="New Password"
                   isPassword={true}
                   value={password}
-                  onChangeText={(text: string) => {
-                    setPassword(text);
+                  onChangeText={t => {
+                    setPassword(t);
                     clearError('password');
                   }}
                   editable={!isLoading}
-                  hasError={!!errors.password} // Triggers the red border natively
+                  hasError={!!errors.password}
                 />
                 {errors.password ? (
                   <Text style={styles.fieldErrorText}>{errors.password}</Text>
                 ) : (
                   <Text style={styles.validationText}>
-                    Must be at least 6 characters long. Include numbers and symbols to make it even safer.
+                    Must be at least 6 characters long.
                   </Text>
                 )}
               </View>
 
-              {/* --- CONFIRM PASSWORD INPUT --- */}
               <View style={styles.inputGroup}>
                 <Input
                   placeholder="Confirm New Password"
                   isPassword={true}
                   value={confirmPassword}
-                  onChangeText={(text: string) => {
-                    setConfirmPassword(text);
+                  onChangeText={t => {
+                    setConfirmPassword(t);
                     clearError('confirmPassword');
                   }}
                   editable={!isLoading}
-                  hasError={!!errors.confirmPassword} // Triggers the red border natively
+                  hasError={!!errors.confirmPassword}
                 />
                 {errors.confirmPassword && (
-                  <Text style={styles.fieldErrorText}>{errors.confirmPassword}</Text>
+                  <Text style={styles.fieldErrorText}>
+                    {errors.confirmPassword}
+                  </Text>
                 )}
               </View>
 
-              {/* --- API / GLOBAL ERROR --- */}
               {displayGlobalError ? (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>• {displayGlobalError}</Text>
+                  <Icon name="alert-circle" size={16} color={colors.error || '#FF3B30'} style={{ marginRight: spacing.sm }} />
+                  <Text style={styles.errorText}>{displayGlobalError}</Text>
                 </View>
               ) : null}
-
             </View>
-          </View>
+          </Animated.View>
 
-          <View style={styles.footer}>
-            <ButtonPrimary
-              title={isLoading ? 'Updating...' : 'Confirm'}
-              onPress={handleConfirm}
-              disabled={isLoading || !password || !confirmPassword}
-            />
-          </View>
+          {/* 3. ANIMATED FOOTER */}
+          <Animated.View style={{ opacity: footerAnim, transform: getTransform(footerAnim) }}>
+            <View style={styles.footer}>
+              <ButtonPrimary
+                title={isLoading ? 'Updating...' : 'Confirm Password'}
+                onPress={handleConfirm}
+                disabled={isLoading || !password || !confirmPassword}
+              />
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -186,57 +248,117 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF' // Strict White Background
+    backgroundColor: '#FFFFFF', // STRICT WHITE BACKGROUND MAINTAINED
   },
+  
+  // --- DECORATIVE BACKGROUND ELEMENTS ---
+  glowAccentTop: {
+    position: 'absolute',
+    top: -150,
+    right: -100,
+    width: 400,
+    height: 400,
+    borderRadius: radius.full,
+  },
+  glowAccentBottom: {
+    position: 'absolute',
+    bottom: -200,
+    left: -150,
+    width: 450,
+    height: 450,
+    borderRadius: radius.full,
+  },
+
   keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
   },
-  header: { marginTop: spacing.xl, marginBottom: spacing.xl },
-  title: { ...typography.screenTitle, color: colors.primary, fontSize: 24 },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  form: { gap: spacing.md },
   
-  // --- FIELD GROUP STYLING ---
-  inputGroup: {
+  // --- MODERN HEADER STYLING ---
+  header: { 
+    marginBottom: spacing.xxl 
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight || '#F9FAFB', 
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.xl,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+    marginRight: spacing.xs,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: colors.primaryDark || colors.textSecondary,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: { 
+    ...typography.screenTitle,
+    fontSize: 36, 
+    lineHeight: 44,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },
+  subtitle: {
+    ...typography.bodyLarge,
+    color: colors.textMuted,
+    lineHeight: 24,
+  },
+  
+  // --- FORM STYLING ---
+  form: { 
+    gap: spacing.md 
+  },
+  inputGroup: { 
+    marginBottom: spacing.xs 
+  },
+  
+  // --- HELPER & ERROR STYLING ---
   validationText: {
     ...typography.caption,
     color: colors.textMuted,
     lineHeight: 18,
     paddingHorizontal: 4,
-    marginTop: 4, 
+    marginTop: 4,
   },
   fieldErrorText: {
-    color: colors.error || '#FF3B30', 
-    ...typography.caption,
+    ...typography.caption, // Spread typography first
+    color: colors.error || '#FF3B30', // Apply priority color
     fontWeight: '500',
-    marginTop: 4,
+    marginTop: 6,
     marginLeft: 4,
   },
-
-  // --- API ERROR CONTAINER ---
   errorContainer: {
-    backgroundColor: '#FFEFEF',
-    padding: spacing.sm,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    padding: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#FFD6D6',
+    borderColor: '#FFE1E1',
     marginTop: spacing.xs,
   },
-  errorText: { 
-    color: colors.error || '#FF3B30', // GUARANTEED RED FALLBACK
+  errorText: {
     ...typography.caption, 
-    fontWeight: '500' 
+    color: colors.error || '#FF3B30', 
+    fontWeight: '600',
+    flex: 1,
   },
   
-  footer: { marginTop: spacing.xl },
+  // --- FOOTER STYLING ---
+  footer: { 
+    marginTop: spacing.xxl 
+  },
 });

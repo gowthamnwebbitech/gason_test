@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, StatusBar } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Image, StyleSheet, StatusBar, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { ButtonPrimary } from '@/components/ButtonPrimary';
@@ -12,6 +12,32 @@ export const WelcomeScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
 
+  // Animation Refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Fade-in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+
+    // Infinite floating animation for the logo
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const floatInterpolate = floatAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -20],
+  });
+
   const handleGetStarted = async () => {
     await dispatch(completeOnboarding());
     navigation.replace('Login'); 
@@ -21,31 +47,31 @@ export const WelcomeScreen = ({ navigation }: any) => {
     <View style={styles.main}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      {/* Decorative Gradient Background */}
-      <LinearGradient 
-        colors={['rgba(0, 194, 111, 0.03)', 'transparent']} 
-        style={styles.gradient} 
-      />
+      {/* CREATIVE BACKGROUND ORBS */}
+      <View style={[styles.orb, styles.orbTop]} />
+      <View style={[styles.orb, styles.orbBottom]} />
 
       <View style={[styles.content, { marginTop: insets.top }]}>
-        {/* Large Brand Visual */}
-        <Image source={images.logo} style={styles.logo} />
+        {/* Floating Animated Logo */}
+        <Animated.View style={{ transform: [{ translateY: floatInterpolate }] }}>
+          <Image source={images.logo} style={styles.logo} />
+        </Animated.View>
         
-        <View style={styles.textWrapper}>
+        <Animated.View style={[styles.textWrapper, { opacity: fadeAnim }]}>
           <Text style={styles.subtitle}>Welcome to</Text>
           <Text style={styles.title}>GASON</Text>
           <Text style={styles.brandExtension}>INDIA LIMITED</Text>
           <Text style={styles.desc}>Precision cooking technology for the modern Indian home.</Text>
-        </View>
+        </Animated.View>
       </View>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+      <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <ButtonPrimary
           title="Get Started"
           onPress={handleGetStarted}
           style={styles.button}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -53,14 +79,24 @@ export const WelcomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Strict White Background
+    backgroundColor: '#FFFFFF', 
   },
-  gradient: {
+  orb: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.5,
+  },
+  orbTop: {
+    top: -50,
+    right: -100,
+    backgroundColor: colors.primary + '10',
+  },
+  orbBottom: {
+    bottom: -50,
+    left: -100,
+    backgroundColor: '#F0F0F0',
   },
   content: { 
     flex: 1, 
@@ -69,8 +105,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   logo: { 
-    width: moderateScale(220), 
-    height: moderateScale(220), 
+    width: moderateScale(260), 
+    height: moderateScale(260), 
     resizeMode: 'contain',
     marginBottom: spacing.md,
   },
@@ -79,42 +115,46 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.body,
-    fontSize: moderateScale(14),
-    letterSpacing: 4,
+    fontSize: moderateScale(12),
+    letterSpacing: 6,
     textTransform: 'uppercase',
     color: colors.textMuted,
     marginBottom: spacing.xs,
   },
   title: { 
     ...typography.screenTitle,
-    fontSize: moderateScale(48),
+    fontSize: moderateScale(56),
     fontFamily: 'Poppins-Bold',
-    letterSpacing: -1,
+    letterSpacing: -2,
     color: colors.textPrimary,
   },
   brandExtension: {
     ...typography.bodyLarge,
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(14),
     fontFamily: 'Poppins-SemiBold',
-    letterSpacing: 6,
+    letterSpacing: 8,
     color: colors.primary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xl,
   },
   desc: {
     ...typography.body,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(15),
     textAlign: 'center',
     color: colors.textSecondary,
-    maxWidth: '80%',
-    lineHeight: 22,
+    maxWidth: '85%',
+    lineHeight: 24,
   },
   footer: { 
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
   button: { 
-    height: 58,
-    borderRadius: radius.xl,
+    height: 60,
+    borderRadius: radius.full, // Ultra-rounded pill shape
     backgroundColor: colors.black,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
 });

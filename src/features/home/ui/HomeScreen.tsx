@@ -21,17 +21,49 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import { fetchHomeData } from '../store/homeThunks';
 import { Header } from '@/components/header';
 import { ProductCard } from '@/components/ProductCard';
-import { colors, spacing, typography, radius, shadows, moderateScale, screenWidth } from '@/theme';
+import {
+  colors,
+  spacing,
+  typography,
+  radius,
+  shadows,
+  moderateScale,
+  screenWidth,
+} from '@/theme';
 import { Slider, Product, DigitalId } from '../store/homeTypes';
 
 const BANNER_WIDTH = screenWidth() - spacing.lg * 2;
-const PRODUCT_CARD_WIDTH = screenWidth() * 0.42; 
+const PRODUCT_CARD_WIDTH = screenWidth() * 0.42;
 
 const SERVICES = [
-  { id: '1', name: 'Survey', icon: 'clipboard', color: colors.primary, route: 'Survey' },
-  { id: '2', name: 'Delivery', icon: 'truck', color: '#F39C12', route: 'Delivery' },
-  { id: '3', name: 'Emergency', icon: 'alert-triangle', color: '#E74C3C', route: 'Emergency' },
-  { id: '4', name: 'Support', icon: 'headphones', color: '#3498DB', route: 'Support' },
+  {
+    id: '1',
+    name: 'Survey',
+    icon: 'clipboard',
+    color: colors.primary,
+    route: 'Survey',
+  },
+  {
+    id: '2',
+    name: 'Delivery',
+    icon: 'truck',
+    color: '#F39C12',
+    route: 'Delivery',
+  },
+  {
+    id: '3',
+    name: 'Emergency',
+    icon: 'alert-triangle',
+    color: '#E74C3C',
+    route: 'Emergency',
+  },
+  {
+    id: '4',
+    name: 'Support',
+    icon: 'headphones',
+    color: '#3498DB',
+    route: 'Support',
+  },
 ];
 
 // ==========================================
@@ -49,23 +81,26 @@ const BannerCarousel = memo(({ sliders }: { sliders: Slider[] }) => {
     const timer = setTimeout(() => {
       let nextIndex = activeIndex + 1;
       if (nextIndex >= sliders.length) nextIndex = 0;
-      
+
       scrollViewRef.current?.scrollTo({
         x: nextIndex * (BANNER_WIDTH + spacing.md),
         animated: true,
       });
-      
+
       setActiveIndex(nextIndex);
-    }, 4500); 
+    }, 4500);
 
     return () => clearTimeout(timer);
   }, [activeIndex, sliders]);
 
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
-    setActiveIndex(index);
-  }, []);
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const slideSize = event.nativeEvent.layoutMeasurement.width;
+      const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+      setActiveIndex(index);
+    },
+    [],
+  );
 
   if (!sliders?.length) return null;
 
@@ -80,23 +115,32 @@ const BannerCarousel = memo(({ sliders }: { sliders: Slider[] }) => {
         decelerationRate="fast"
         contentContainerStyle={styles.sliderContent}
       >
-        {sliders.map((banner) => (
+        {sliders.map(banner => (
           <View key={banner.id.toString()} style={styles.bannerSlide}>
-            <Image source={{ uri: banner.image }} style={styles.bannerImage} resizeMode="cover" />
-            
+            <Image
+              source={{ uri: banner.image }}
+              style={styles.bannerImage}
+              resizeMode="cover"
+            />
+
             {/* Sleeker, darker gradient for better text readability */}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
               style={styles.bannerOverlay}
             >
-              <Text style={styles.bannerTitle} numberOfLines={2}>{banner.title}</Text>
+              <Text style={styles.bannerTitle} numberOfLines={2}>
+                {banner.title}
+              </Text>
             </LinearGradient>
           </View>
         ))}
       </ScrollView>
       <View style={styles.pagination}>
         {sliders.map((_, i) => (
-          <View key={i.toString()} style={[styles.dot, activeIndex === i && styles.activeDot]} />
+          <View
+            key={i.toString()}
+            style={[styles.dot, activeIndex === i && styles.activeDot]}
+          />
         ))}
       </View>
     </View>
@@ -106,14 +150,16 @@ const BannerCarousel = memo(({ sliders }: { sliders: Slider[] }) => {
 const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
   if (!digitalId) return null;
 
-  const formattedNumber = digitalId.cart_number.replace(/(.{4})/g, '$1 ').trim();
+  const formattedNumber = digitalId.cart_number
+    .replace(/(.{4})/g, '$1 ')
+    .trim();
 
   return (
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Digital ID</Text>
       </View>
-      
+
       {/* Premium Titanium/Graphite Metal Finish */}
       <LinearGradient
         colors={['#1E1E24', '#2B2B36', '#121216']}
@@ -123,7 +169,11 @@ const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
       >
         {/* Holographic Light Sweep */}
         <LinearGradient
-          colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.05)']}
+          colors={[
+            'rgba(255,255,255,0.2)',
+            'rgba(255,255,255,0)',
+            'rgba(255,255,255,0.05)',
+          ]}
           start={{ x: -0.2, y: -0.2 }}
           end={{ x: 1.5, y: 1.5 }}
           style={StyleSheet.absoluteFillObject}
@@ -133,11 +183,19 @@ const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
           <Text style={styles.cardBrandName}>
             GASON <Text style={{ fontWeight: '300' }}>PREMIUM</Text>
           </Text>
-          <Icon name="wifi" size={24} color="rgba(255,255,255,0.9)" style={{ transform: [{ rotate: '90deg' }] }} />
+          <Icon
+            name="wifi"
+            size={24}
+            color="rgba(255,255,255,0.9)"
+            style={{ transform: [{ rotate: '90deg' }] }}
+          />
         </View>
 
         <View style={styles.cardChipRow}>
-          <LinearGradient colors={['#F5D76E', '#D4AF37', '#967113']} style={styles.emvChip}>
+          <LinearGradient
+            colors={['#F5D76E', '#D4AF37', '#967113']}
+            style={styles.emvChip}
+          >
             <View style={styles.chipLineContainer}>
               <View style={styles.chipLine} />
               <View style={styles.chipLine} />
@@ -153,7 +211,9 @@ const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
         <View style={styles.cardBottomRow}>
           <View>
             <Text style={styles.cardDateLabel}>MEMBER NAME</Text>
-            <Text style={styles.cardUserName} numberOfLines={1}>{digitalId.name.toUpperCase()}</Text>
+            <Text style={styles.cardUserName} numberOfLines={1}>
+              {digitalId.name.toUpperCase()}
+            </Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.cardDateLabel}>VALID THRU</Text>
@@ -165,41 +225,62 @@ const RealisticDigitalId = memo(({ digitalId }: { digitalId: DigitalId }) => {
   );
 });
 
-const ProductCarousel = memo(({ title, products, navigation }: { title: string; products: Product[]; navigation: any }) => {
-  if (!products?.length) return null;
+const ProductCarousel = memo(
+  ({
+    title,
+    products,
+    navigation,
+  }: {
+    title: string;
+    products: Product[];
+    navigation: any;
+  }) => {
+    if (!products?.length) return null;
 
-  const showBadge = title.toLowerCase().includes('featured');
+    const showBadge = title.toLowerCase().includes('featured');
 
-  return (
-    <View style={styles.sectionContainer}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity style={styles.seeAllBtn} activeOpacity={0.7} onPress={() => navigation.navigate('Products')}>
-          <Text style={styles.seeAllText}>See All</Text>
-          <Icon name="chevron-right" size={16} color={colors.primary} style={{ marginTop: 2 }} />
-        </TouchableOpacity>
+    return (
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <TouchableOpacity
+            style={styles.seeAllBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Products')}
+          >
+            <Text style={styles.seeAllText}>See All</Text>
+            <Icon
+              name="chevron-right"
+              size={16}
+              color={colors.primary}
+              style={{ marginTop: 2 }}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.productsScroll}
+          snapToInterval={PRODUCT_CARD_WIDTH + spacing.md}
+          decelerationRate="fast"
+        >
+          {products.map(item => (
+            <ProductCard
+              key={item.id.toString()}
+              item={item}
+              cardWidth={PRODUCT_CARD_WIDTH}
+              showBadge={showBadge}
+              onPress={() =>
+                navigation.navigate('ProductDetail', { product: item })
+              }
+            />
+          ))}
+        </ScrollView>
       </View>
-      
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.productsScroll}
-        snapToInterval={PRODUCT_CARD_WIDTH + spacing.md}
-        decelerationRate="fast"
-      >
-        {products.map((item) => (
-          <ProductCard
-            key={item.id.toString()}
-            item={item}
-            cardWidth={PRODUCT_CARD_WIDTH}
-            showBadge={showBadge}
-            onPress={() => navigation.navigate('ProductDetail', { product: item })}
-          />
-        ))}
-      </ScrollView>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const ServicesGrid = memo(({ navigation }: { navigation: any }) => (
   <View style={styles.sectionContainer}>
@@ -207,7 +288,7 @@ const ServicesGrid = memo(({ navigation }: { navigation: any }) => (
       <Text style={styles.sectionTitle}>Services</Text>
     </View>
     <View style={styles.servicesGrid}>
-      {SERVICES.map((service) => (
+      {SERVICES.map(service => (
         <TouchableOpacity
           key={service.id}
           activeOpacity={0.7}
@@ -234,9 +315,9 @@ export const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
 
-  const { user } = useAppSelector((state) => state.auth);
-  const { data, isLoading, isRefreshing } = useAppSelector((state) => state.home);
-  console.log("user in home screen", user);
+  const { user } = useAppSelector(state => state.auth);
+  const { data, isLoading, isRefreshing } = useAppSelector(state => state.home);
+  console.log('user in home screen', user);
   useEffect(() => {
     dispatch(fetchHomeData(false));
   }, [dispatch]);
@@ -257,7 +338,11 @@ export const HomeScreen = () => {
 
   return (
     <View style={styles.main}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#FFFFFF"
+        translucent={true}
+      />
 
       <Header
         variant="main"
@@ -266,52 +351,60 @@ export const HomeScreen = () => {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 4) - 2 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 4) - 2 },
+        ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         <BannerCarousel sliders={data?.sliders || []} />
-        
-        {primaryDigitalId && <RealisticDigitalId digitalId={primaryDigitalId} />}
-        
-        <ProductCarousel 
-          title="Featured Products" 
-          products={data?.featured_products || []} 
-          navigation={navigation} 
-        />
-        
-        <ProductCarousel 
-          title="Best Selling" 
-          products={data?.best_selling_products || []} 
-          navigation={navigation} 
-        />
 
         <ServicesGrid navigation={navigation} />
+
+        {primaryDigitalId && (
+          <RealisticDigitalId digitalId={primaryDigitalId} />
+        )}
+
+        <ProductCarousel
+          title="Featured Products"
+          products={data?.featured_products || []}
+          navigation={navigation}
+        />
+
+        <ProductCarousel
+          title="Best Selling"
+          products={data?.best_selling_products || []}
+          navigation={navigation}
+        />
       </ScrollView>
     </View>
   );
 };
 
-// ==========================================
-// STYLES
-// ==========================================
-
 const styles = StyleSheet.create({
-  main: { 
-    flex: 1, 
+  main: {
+    flex: 1,
     backgroundColor: '#FFFFFF', // Strict White Background
   },
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#FFFFFF' 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
-  scrollContent: { 
-    paddingTop: spacing.md 
+  scrollContent: {
+    paddingTop: spacing.md,
   },
   sectionContainer: {
-    marginBottom: spacing.xxl, 
+    marginBottom: spacing.xxl,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -320,17 +413,17 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  sectionTitle: { 
-    ...typography.heading, 
+  sectionTitle: {
+    ...typography.heading,
     color: colors.textPrimary,
-    fontSize: moderateScale(19), 
+    fontSize: moderateScale(19),
     fontFamily: typography.screenTitle.fontFamily, // Bolder, premium look
   },
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  seeAllText: { 
+  seeAllText: {
     ...typography.link,
     color: colors.primary,
     fontSize: moderateScale(13),
@@ -338,33 +431,33 @@ const styles = StyleSheet.create({
   },
 
   // Banner Styles
-  sliderContainer: { 
-    marginBottom: spacing.xl 
+  sliderContainer: {
+    marginBottom: spacing.xl,
   },
-  sliderContent: { 
-    paddingHorizontal: spacing.lg, 
-    gap: spacing.md 
+  sliderContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
   bannerSlide: {
     width: BANNER_WIDTH,
     borderRadius: radius.lg,
-    height: moderateScale(170), 
+    height: moderateScale(170),
     overflow: 'hidden',
     backgroundColor: colors.surface,
     ...shadows.card,
   },
-  bannerImage: { 
-    width: '100%', 
-    height: '100%', 
-    position: 'absolute' 
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
   },
-  bannerOverlay: { 
-    flex: 1, 
-    justifyContent: 'flex-end', 
-    padding: spacing.xl 
+  bannerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: spacing.xl,
   },
-  bannerTitle: { 
-    ...typography.heading, 
+  bannerTitle: {
+    ...typography.heading,
     color: colors.white,
     fontSize: moderateScale(20),
     lineHeight: moderateScale(26),
@@ -373,20 +466,20 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  pagination: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    marginTop: spacing.md 
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing.md,
   },
-  dot: { 
-    width: 6, 
-    height: 6, 
-    borderRadius: radius.full, 
-    backgroundColor: colors.border, 
-    marginHorizontal: spacing.xs 
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xs,
   },
-  activeDot: { 
-    backgroundColor: colors.primary, 
+  activeDot: {
+    backgroundColor: colors.primary,
     width: 24, // Pill shape for modern feel
   },
 
@@ -402,7 +495,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     overflow: 'hidden',
-    aspectRatio: 1.586, 
+    aspectRatio: 1.586,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -456,7 +549,7 @@ const styles = StyleSheet.create({
   },
   cardUserId: {
     color: '#F4F4F4',
-    fontFamily: 'Courier', 
+    fontFamily: 'Courier',
     fontSize: moderateScale(22),
     letterSpacing: 4,
     fontWeight: 'bold',
@@ -499,9 +592,9 @@ const styles = StyleSheet.create({
   },
 
   // Carousel product spacing container
-  productsScroll: { 
-    paddingHorizontal: spacing.lg, 
-    gap: spacing.md ,
+  productsScroll: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
 
   // Services Grid
@@ -512,17 +605,17 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     rowGap: spacing.lg,
   },
-  serviceItem: { 
-    alignItems: 'center', 
-    width: '22%' 
+  serviceItem: {
+    alignItems: 'center',
+    width: '22%',
   },
-  serviceIconContainer: { 
-    width: moderateScale(56), 
-    height: moderateScale(56), 
-    borderRadius: moderateScale(28), 
-    backgroundColor: '#FFFFFF', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  serviceIconContainer: {
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
     ...shadows.card,
     elevation: 4,
@@ -530,8 +623,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
-  serviceName: { 
-    ...typography.caption, 
+  serviceName: {
+    ...typography.caption,
     color: colors.textPrimary,
     fontFamily: typography.bodyLarge.fontFamily,
     fontSize: moderateScale(11),

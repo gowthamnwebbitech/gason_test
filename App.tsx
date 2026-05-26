@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { Providers } from './src/app/Providers';
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <Providers />
+        <Toast /> 
       </View>
     </SafeAreaProvider>
   );

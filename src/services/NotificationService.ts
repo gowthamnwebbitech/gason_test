@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import messaging, { // Import the default messaging instance generator
+import {
+  getMessaging,
   requestPermission,
   getToken,
   onTokenRefresh,
@@ -8,16 +9,13 @@ import messaging, { // Import the default messaging instance generator
   getInitialNotification,
   AuthorizationStatus,
   registerDeviceForRemoteMessages,
-  RemoteMessage // Updated type for the modular SDK
+  RemoteMessage
 } from '@react-native-firebase/messaging';
 
 class NotificationService {
-  // 1. Initialize the messaging instance once
-  private msgInstance = messaging();
 
   async requestUserPermission(): Promise<boolean> {
-    // 2. Pass the instance as the first argument
-    const authStatus = await requestPermission(this.msgInstance);
+    const authStatus = await requestPermission(getMessaging());
     const enabled =
       authStatus === AuthorizationStatus.AUTHORIZED ||
       authStatus === AuthorizationStatus.PROVISIONAL;
@@ -33,10 +31,10 @@ class NotificationService {
   async getFCMToken(): Promise<string | null> {
     try {
       if (Platform.OS === 'ios') {
-        await registerDeviceForRemoteMessages(this.msgInstance);
+        await registerDeviceForRemoteMessages(getMessaging());
       }
 
-      const token = await getToken(this.msgInstance);
+      const token = await getToken(getMessaging());
       console.log('📱 FCM Device Token:', token);
       return token;
     } catch (error) {
@@ -46,29 +44,27 @@ class NotificationService {
   }
 
   listenToTokenRefresh(onTokenRefreshed: (newToken: string) => void) {
-    // 3. Explicitly type 'newToken' as string
-    return onTokenRefresh(this.msgInstance, (newToken: string) => {
+    return onTokenRefresh(getMessaging(), (newToken: string) => {
       onTokenRefreshed(newToken);
     });
   }
 
   setupForegroundListener(onMessageReceived: (message: RemoteMessage) => void) {
-    // 4. Explicitly type 'remoteMessage' as RemoteMessage
-    return onMessage(this.msgInstance, async (remoteMessage: RemoteMessage) => {
+    return onMessage(getMessaging(), async (remoteMessage: RemoteMessage) => {
       console.log('📩 New Foreground Message:', remoteMessage);
       onMessageReceived(remoteMessage);
     });
   }
 
   setupBackgroundTapListener(onNotificationTapped: (message: RemoteMessage) => void) {
-    return onNotificationOpenedApp(this.msgInstance, (remoteMessage: RemoteMessage) => {
+    return onNotificationOpenedApp(getMessaging(), (remoteMessage: RemoteMessage) => {
       console.log('🚀 App opened from background via notification:', remoteMessage);
       onNotificationTapped(remoteMessage);
     });
   }
 
   async checkInitialNotification(onNotificationTapped: (message: RemoteMessage) => void) {
-    const initialNotification = await getInitialNotification(this.msgInstance);
+    const initialNotification = await getInitialNotification(getMessaging());
     if (initialNotification) {
       console.log('💀 App opened from quit state via notification:', initialNotification);
       onNotificationTapped(initialNotification);

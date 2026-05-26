@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -8,9 +8,15 @@ import {
   Platform, 
   ScrollView,
   Keyboard,
-  TouchableOpacity
+  TouchableOpacity,
+  Animated,
+  Easing
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Feather';
+
 import { ButtonPrimary } from '@/components/ButtonPrimary';
 import { colors, spacing, typography, radius } from '@/theme';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -20,7 +26,6 @@ export const OTPScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   
-  // Only pull isLoading. We handle errors locally so it never starts red on load.
   const { isLoading } = useAppSelector((state: any) => state.auth);
 
   const type = route?.params?.type || 'signup'; 
@@ -30,15 +35,58 @@ export const OTPScreen = ({ navigation, route }: any) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [localError, setLocalError] = useState<string | null>(null);
   
-  // Timer State
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   
   const inputs = useRef<Array<TextInput | null>>([]);
-
   const isOtpComplete = otp.every(val => val !== '');
 
-  // 1. Countdown Timer Logic
+  // --- STAGGERED PREMIUM ANIMATIONS ---
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
+  const footerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(formAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(footerAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }),
+    ]).start();
+  }, [headerAnim, formAnim, footerAnim]);
+
+  const getTransform = (anim: Animated.Value) => {
+    return [
+      {
+        translateY: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [40, 0],
+        }),
+      },
+    ];
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      inputs.current[0]?.focus();
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, []);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (timer > 0) {
@@ -57,18 +105,60 @@ export const OTPScreen = ({ navigation, route }: any) => {
     return `0${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // 2. Auto-submit ONLY when completely filled
+  const handleVerify = useCallback(() => {
+    if (isLoading) return;
+    
+    const otpString = otp.join('');
+
+    if (otpString.length !== 6 || !/^\d{6}$/.test(otpString)) {
+      setLocalError('Please enter all 6 digits to verify.');
+      return;
+    }
+
+    Keyboard.dismiss();
+
+    if (type === 'signup') {
+      dispatch(verifySignupOtp({ user_id: userId, otp: otpString }))
+        .unwrap()
+        .then(() => {
+          Toast.show({
+            type: 'success',
+            text1: 'Verification Successful',
+            text2: 'Your account has been verified. You can now log in.',
+            position: 'top',
+          });
+          
+          navigation.navigate('Login'); 
+        })
+        .catch((err: any) => {
+          const errorMessage = err?.message || err?.data?.message || (typeof err === 'string' ? err : 'The verification code is incorrect. Please try again.');
+          
+          setLocalError(errorMessage);
+          
+          Toast.show({
+            type: 'error',
+            text1: 'Verification Failed',
+            text2: errorMessage,
+            position: 'top',
+          });
+          
+          setOtp(['', '', '', '', '', '']);
+          inputs.current[0]?.focus();
+        });
+    } else if (type === 'forgot') {
+      navigation.navigate('NewPassword', { phone, otp: otpString });
+    }
+  }, [otp, isLoading, type, dispatch, userId, navigation, phone]);
+
   useEffect(() => {
     if (isOtpComplete && !isLoading) {
       handleVerify();
     }
-  }, [isOtpComplete]);
+  }, [isOtpComplete, isLoading, handleVerify]);
 
-  // 3. Resend OTP Handler
   const handleResend = () => {
     if (!canResend) return;
     
-    // Reset UI & Errors safely
     setTimer(60);
     setCanResend(false);
     setLocalError(null);
@@ -78,20 +168,38 @@ export const OTPScreen = ({ navigation, route }: any) => {
     if (type === 'forgot') {
       dispatch(forgotPassword(phone))
         .unwrap()
-        .catch((err: any) => setLocalError(err || 'Failed to resend OTP.'));
+        .then(() => {
+          Toast.show({
+            type: 'success',
+            text1: 'OTP Sent',
+            text2: 'A new verification code has been sent to your phone.',
+          });
+        })
+        .catch((err: any) => {
+          const errMsg = err?.message || err?.data?.message || typeof err === 'string' ? err : 'Failed to resend the code.';
+          setLocalError(errMsg);
+          Toast.show({
+            type: 'error',
+            text1: 'Resend Failed',
+            text2: errMsg,
+          });
+        });
     } else if (type === 'signup') {
+      // TODO: Dispatch signup resend API
       console.log('Dispatch signup resend API here for phone:', phone);
+      Toast.show({
+        type: 'success',
+        text1: 'OTP Sent',
+        text2: 'A new verification code has been sent.',
+      });
     }
   };
 
-  // 4. Advanced Smooth Typing & Paste Logic
   const handleChangeText = (text: string, index: number) => {
-    // INSTANT RECOVERY: Clear any red errors the second they start typing again
     if (localError) setLocalError(null);
     
     const cleanedText = text.replace(/[^0-9]/g, '');
 
-    // Handle Copy & Paste
     if (cleanedText.length > 1) {
       const pastedChars = cleanedText.slice(0, 6 - index).split('');
       const newOtp = [...otp];
@@ -109,20 +217,16 @@ export const OTPScreen = ({ navigation, route }: any) => {
       return;
     }
 
-    // Normal typing
     const newOtp = [...otp];
     newOtp[index] = cleanedText;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (cleanedText !== '' && index < 5) {
       inputs.current[index + 1]?.focus();
     }
   };
 
-  // 5. Flawless Backspace UX
   const handleKeyPress = ({ nativeEvent }: any, index: number) => {
-    // INSTANT RECOVERY: Clear red errors on backspace
     if (localError) setLocalError(null);
 
     if (nativeEvent.key === 'Backspace') {
@@ -135,41 +239,22 @@ export const OTPScreen = ({ navigation, route }: any) => {
     }
   };
 
-  // 6. Strict Validation & Verification (Handles Empty State)
-  const handleVerify = () => {
-    if (isLoading) return;
-    
-    const otpString = otp.join('');
-
-    // Pre-Validation: Trigger error if they try to verify while empty or incomplete
-    if (otpString.length !== 6 || !/^\d{6}$/.test(otpString)) {
-      setLocalError('Please enter all 6 digits to verify.');
-      return;
-    }
-
-    Keyboard.dismiss();
-
-    if (type === 'signup') {
-      dispatch(verifySignupOtp({ user_id: userId, otp: otpString }))
-        .unwrap()
-        .then(() => {
-          navigation.navigate('Login'); 
-        })
-        .catch((err: any) => {
-          // CATCH MISMATCH: Set local error so UI turns red ONLY after failing
-          const errorMessage = typeof err === 'string' ? err : err?.message || 'OTP Mismatch. Please try again.';
-          setLocalError(errorMessage);
-          
-          setOtp(['', '', '', '', '', '']);
-          inputs.current[0]?.focus();
-        });
-    } else if (type === 'forgot') {
-      navigation.navigate('NewPassword', { phone, otp: otpString });
-    }
-  };
-
   return (
     <View style={[styles.main, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
+      <LinearGradient
+        colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentTop}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        colors={[colors.primary + '0A', 'rgba(255,255,255,0)']}
+        style={styles.glowAccentBottom}
+        start={{ x: 1, y: 1 }}
+        end={{ x: 0, y: 0 }}
+      />
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={styles.keyboardView}
@@ -180,12 +265,23 @@ export const OTPScreen = ({ navigation, route }: any) => {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View>
+          {/* 1. ANIMATED HEADER */}
+          <Animated.View style={{ opacity: headerAnim, transform: getTransform(headerAnim) }}>
             <View style={styles.header}>
-              <Text style={styles.title}>Verify phone number</Text>
-              <Text style={styles.subtitle}>We sent a verification code to {phone}</Text>
+              <View style={styles.badgeContainer}>
+                <View style={styles.badgeDot} />
+                <Text style={styles.badgeText}>Verification</Text>
+              </View>
+              <Text style={styles.title}>Enter verification{'\n'}code</Text>
+              <Text style={styles.subtitle}>
+                We've sent a 6-digit code to{'\n'}
+                <Text style={styles.subtitleBold}>{phone}</Text>
+              </Text>
             </View>
+          </Animated.View>
 
+          {/* 2. ANIMATED FORM */}
+          <Animated.View style={{ opacity: formAnim, transform: getTransform(formAnim), flex: 1 }}>
             <View style={styles.otpSection}>
               <View 
                 style={[styles.otpRow, isLoading && styles.otpRowLoading]} 
@@ -198,7 +294,7 @@ export const OTPScreen = ({ navigation, route }: any) => {
                     style={[
                       styles.otpInput, 
                       val ? styles.otpInputActive : null,
-                      localError ? styles.otpInputError : null // Visually turns boxes RED on empty/mismatch error
+                      localError ? styles.otpInputError : null
                     ]}
                     value={val}
                     onChangeText={(text) => handleChangeText(text, i)}
@@ -209,21 +305,22 @@ export const OTPScreen = ({ navigation, route }: any) => {
                     editable={!isLoading}
                     textContentType="oneTimeCode" 
                     autoComplete="sms-otp"
+                    cursorColor={colors.primary}
                   />
                 ))}
               </View>
 
-              {/* Displays the Error text ONLY when localError exists */}
+              {/* Global Error Container matching other screens */}
               {localError ? (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>• {localError}</Text>
+                  <Icon name="alert-circle" size={16} color={colors.error || '#FF3B30'} style={{ marginRight: spacing.sm }} />
+                  <Text style={styles.errorText}>{localError}</Text>
                 </View>
               ) : null}
 
-              {/* Dynamic Resend Timer / Button */}
               <View style={styles.resendContainer}>
                 {canResend ? (
-                  <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
+                  <TouchableOpacity onPress={handleResend} activeOpacity={0.7} style={styles.resendButton}>
                     <Text style={styles.resendText}>
                       Didn't receive the code? <Text style={styles.resendActive}>Resend Now</Text>
                     </Text>
@@ -235,16 +332,18 @@ export const OTPScreen = ({ navigation, route }: any) => {
                 )}
               </View>
             </View>
-          </View>
+          </Animated.View>
 
-          <View style={styles.footer}>
-            {/* The button is always active so it can trigger the "Empty" error if tapped early */}
-            <ButtonPrimary 
-              title={isLoading ? "Verifying..." : "Verify"} 
-              onPress={handleVerify}
-              disabled={isLoading}
-            />
-          </View>
+          {/* 3. ANIMATED FOOTER */}
+          <Animated.View style={{ opacity: footerAnim, transform: getTransform(footerAnim) }}>
+            <View style={styles.footer}>
+              <ButtonPrimary 
+                title={isLoading ? "Verifying..." : "Verify & Continue"} 
+                onPress={handleVerify}
+                disabled={isLoading}
+              />
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -252,71 +351,169 @@ export const OTPScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: '#FFFFFF' }, // Maintained strict white background
+  main: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF', // STRICT WHITE BACKGROUND MAINTAINED
+  },
+  
+  // --- DECORATIVE BACKGROUND ELEMENTS ---
+  glowAccentTop: {
+    position: 'absolute',
+    top: -150,
+    right: -100,
+    width: 400,
+    height: 400,
+    borderRadius: radius.full,
+  },
+  glowAccentBottom: {
+    position: 'absolute',
+    bottom: -200,
+    left: -150,
+    width: 450,
+    height: 450,
+    borderRadius: radius.full,
+  },
+
   keyboardView: { flex: 1 },
   scrollContent: { 
     flexGrow: 1, 
     justifyContent: 'space-between', 
     paddingHorizontal: spacing.lg, 
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xxl 
   },
-  header: { marginTop: spacing.xl },
-  title: { ...typography.screenTitle, color: colors.primary, fontSize: 24 },
-  subtitle: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 22 },
   
-  otpSection: { alignItems: 'center', marginTop: spacing.xl },
+  // --- MODERN HEADER STYLING ---
+  header: { 
+    marginBottom: spacing.xl 
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight, 
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.xl,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+    marginRight: spacing.xs,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: { 
+    ...typography.screenTitle,
+    fontSize: 36, 
+    lineHeight: 44,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    ...typography.bodyLarge,
+    color: colors.textMuted,
+    lineHeight: 24,
+  },
+  subtitleBold: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  
+  // --- OTP SECTION STYLING ---
+  otpSection: { 
+    alignItems: 'center', 
+    marginTop: spacing.md 
+  },
   otpRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     width: '100%', 
-    marginBottom: spacing.lg, 
+    marginBottom: spacing.md, 
     gap: 8 
   },
-  otpRowLoading: {
-    opacity: 0.6,
+  otpRowLoading: { 
+    opacity: 0.6 
   },
   otpInput: { 
     flex: 1, 
     aspectRatio: 1, 
-    height: 55, 
-    borderWidth: 1, 
+    height: 56, 
+    borderWidth: 1.5, 
     borderColor: colors.border, 
-    borderRadius: radius.md, 
+    borderRadius: radius.lg, 
     textAlign: 'center', 
-    fontSize: 24, 
+    fontSize: 26, 
+    fontFamily: 'Poppins-SemiBold', // Use your bold font if available
+    fontWeight: '700',
     color: colors.textPrimary, 
     backgroundColor: '#FFFFFF',
     padding: 0, 
     includeFontPadding: false, 
   },
-  otpInputActive: { borderColor: colors.primary, borderWidth: 2 },
-  
-  // --- VISUAL ERROR STATE STYLE ---
+  otpInputActive: { 
+    borderColor: colors.primary, 
+    borderWidth: 2,
+    backgroundColor: colors.primary + '05', // Extremely faint primary tint
+  },
   otpInputError: { 
     borderColor: colors.error || '#FF3B30', 
     borderWidth: 2, 
-    backgroundColor: '#FFF5F5' // Very light red background to indicate error
+    backgroundColor: '#FFF5F5'
   }, 
   
-  errorContainer: { 
-    backgroundColor: '#FFEFEF', 
-    padding: spacing.sm, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#FFD6D6', 
-    marginBottom: spacing.md, 
-    width: '100%' 
+  // --- ERROR STYLING ---
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#FFE1E1',
+    marginBottom: spacing.md,
+    width: '100%',
   },
-  errorText: { 
-    color: colors.error || '#FF3B30',
+  errorText: {
     ...typography.caption, 
-    fontWeight: '500' 
+    color: colors.error || '#FF3B30', 
+    fontWeight: '600',
+    flex: 1,
   },
   
-  resendContainer: { marginTop: spacing.sm },
-  resendText: { ...typography.body, color: colors.textSecondary },
-  timer: { fontWeight: 'bold', color: colors.textPrimary },
-  resendActive: { fontWeight: 'bold', color: colors.primary }, 
+  // --- RESEND TIMER STYLING ---
+  resendContainer: { 
+    marginTop: spacing.xs,
+    alignItems: 'center',
+  },
+  resendButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  resendText: { 
+    ...typography.body, 
+    color: colors.textSecondary 
+  },
+  timer: { 
+    fontWeight: '700', 
+    color: colors.textPrimary 
+  },
+  resendActive: { 
+    fontWeight: '700', 
+    color: colors.primary 
+  }, 
   
-  footer: { marginTop: spacing.xl },
+  // --- FOOTER STYLING ---
+  footer: { 
+    marginTop: spacing.xl 
+  },
 });
