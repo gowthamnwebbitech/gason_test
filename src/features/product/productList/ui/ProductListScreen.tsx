@@ -22,7 +22,7 @@ import { useResponsive } from '@/theme/layout';
 
 import { fetchProducts, searchProducts } from '../store/productThunks';
 import { setSearchQuery, resetProducts } from '../store/productSlice';
-import { ProductCard } from '@/components/ProductCard'; // <-- Import the shared card
+import { ProductCard } from '@/components/ProductCard'; 
 
 type ProductListNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ProductDetail'>;
 

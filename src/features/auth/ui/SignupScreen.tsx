@@ -50,22 +50,23 @@ export const SignupScreen = ({ navigation }: any) => {
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(150, [
+    // Reduced stagger delay for a snappier, compact feel
+    Animated.stagger(100, [
       Animated.timing(headerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(formAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(footerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
@@ -77,7 +78,7 @@ export const SignupScreen = ({ navigation }: any) => {
       {
         translateY: anim.interpolate({
           inputRange: [0, 1],
-          outputRange: [40, 0],
+          outputRange: [20, 0], // Reduced movement range from 40 to 20
         }),
       },
     ];
@@ -173,7 +174,10 @@ export const SignupScreen = ({ navigation }: any) => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+            { 
+              paddingTop: Math.max(insets.top + 10, 20), 
+              paddingBottom: Math.max(insets.bottom + 10, 20) 
+            }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -186,8 +190,8 @@ export const SignupScreen = ({ navigation }: any) => {
                 <View style={styles.badgeDot} />
                 <Text style={styles.badgeText}>New Here?</Text>
               </View>
-              <Text style={styles.title}>Create your{'\n'}account</Text>
-              <Text style={styles.subtitle}>Fill in your details to get started.</Text>
+              <Text style={styles.title}>Create account</Text>
+              <Text style={styles.subtitle}>Fill details to get started.</Text>
             </View>
           </Animated.View>
 
@@ -266,7 +270,7 @@ export const SignupScreen = ({ navigation }: any) => {
 
               {globalError ? (
                 <View style={styles.globalErrorContainer}>
-                  <Icon name="alert-circle" size={16} color={colors.error} style={{ marginRight: spacing.sm }} />
+                  <Icon name="alert-circle" size={14} color={colors.error} style={{ marginRight: 6 }} />
                   <Text style={styles.globalErrorText}>{globalError}</Text>
                 </View>
               ) : null}
@@ -290,7 +294,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     ]}
                   >
                     {isAccepted && (
-                      <Icon name="check" size={12} color={colors.white} />
+                      <Icon name="check" size={10} color={colors.white} />
                     )}
                   </View>
                   <Text style={styles.termsText}>
@@ -338,51 +342,52 @@ export const SignupScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // Strict pure white background constraint met
+    backgroundColor: '#FFFFFF',
   },
   glowAccentTop: {
     position: 'absolute',
     top: -150,
     right: -100,
-    width: 400,
-    height: 400,
+    width: 300,
+    height: 300,
     borderRadius: radius.full,
   },
   glowAccentBottom: {
     position: 'absolute',
-    bottom: -200,
+    bottom: -150,
     left: -150,
-    width: 450,
-    height: 450,
+    width: 300,
+    height: 300,
     borderRadius: radius.full,
   },
   keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20, // Tightened from spacing.lg
   },
   header: { 
-    marginBottom: spacing.xl 
+    marginBottom: 16, // Reduced from spacing.xl
   },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primaryLight, 
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.xl,
     alignSelf: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: 8, // Tighter margin
   },
   badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.primary,
-    marginRight: spacing.xs,
+    marginRight: 6,
   },
   badgeText: {
     ...typography.caption,
+    fontSize: 10, // Made slightly smaller
     color: colors.primaryDark,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -390,42 +395,45 @@ const styles = StyleSheet.create({
   },
   title: { 
     ...typography.screenTitle,
-    fontSize: 36, 
-    lineHeight: 44,
+    fontSize: 26, // Reduced from 36
+    lineHeight: 32, // Reduced from 44
     color: colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: spacing.xs,
+    marginBottom: 2, // Removed spacing.xs
   },
   subtitle: {
     ...typography.bodyLarge,
+    fontSize: 14,
     color: colors.textMuted,
   },
   form: { 
-    gap: spacing.md 
+    gap: 8, // Reduced dramatically from spacing.md
   },
   inputGroup: { 
-    marginBottom: spacing.xs 
+    marginBottom: 4, 
   },
   fieldErrorText: {
     ...typography.caption,
+    fontSize: 11, // Compressed error text
     color: colors.error,
     fontWeight: '500',
-    marginTop: spacing.xs,
-    marginLeft: spacing.xs,
+    marginTop: 2,
+    marginLeft: 4,
   },
   globalErrorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF5F5',
-    padding: spacing.md,
+    padding: 8, // Smaller padding
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: '#FFE1E1',
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
+    marginTop: 4,
+    marginBottom: 4,
   },
   globalErrorText: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.error,
     fontWeight: '600',
     flex: 1,
@@ -433,16 +441,16 @@ const styles = StyleSheet.create({
   termsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
+    paddingVertical: 4,
+    marginTop: 4,
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 18, // Reduced from 22
+    height: 18, // Reduced from 22
     borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: colors.primary,
-    marginRight: spacing.sm,
+    marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.white,
@@ -457,15 +465,15 @@ const styles = StyleSheet.create({
   termsText: { 
     ...typography.caption, 
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12, // Reduced from 14
   },
   termsBold: { 
     fontWeight: '700', 
     color: colors.textPrimary 
   },
   bottomSection: { 
-    gap: spacing.xl, 
-    marginTop: spacing.xl 
+    gap: 12, // Reduced from spacing.xl
+    marginTop: 16, // Reduced from spacing.xl
   },
   footer: { 
     flexDirection: 'row',
@@ -474,10 +482,12 @@ const styles = StyleSheet.create({
   },
   footerText: { 
     ...typography.body, 
+    fontSize: 13, // Smaller footer text
     color: colors.textSecondary 
   },
   link: { 
     ...typography.body, 
+    fontSize: 13,
     fontWeight: '700', 
     color: colors.primary,
   },

@@ -1,17 +1,22 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTabsParamList } from './types';
 import { colors, shadows } from '@/theme';
+import { useAppSelector } from '@/store';
 
-// Import all your actual screens!  
-import { HomeScreen } from '@/features/home/ui/HomeScreen';
+// Member Screens
+import { MemberDashboardScreen } from '@/features/member/dashboard/MemberDashboardScreen';
+import { MemberProfileScreen } from '@/features/member/memberProfile/MemberProfileScreen';
+
+// Standard Screens
 import { ProductListScreen } from '@/features/product/productList/ui/ProductListScreen';
 import { CartScreen } from '@/features/cart/ui/CartScreen';
 import { ServicesScreen } from '@/features/service/home/ui/ServicesScreen';
 import { ProfileScreen } from '@/features/profile/ui/ProfileScreen';
+import { HomeScreen } from '@/features/home/ui/HomeScreen';
 
 const Tab = createBottomTabNavigator<AppTabsParamList>();
 
@@ -38,11 +43,12 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           }
         };
 
-        let iconName = 'home';
+        // --- UPDATED ICON LOGIC ---
+        let iconName = 'home'; // Defaults to 'home' for 'Home' and 'MemberHome'
         if (route.name === 'Products') iconName = 'grid';
         if (route.name === 'Cart') iconName = 'shopping-bag';
         if (route.name === 'Services') iconName = 'briefcase';
-        if (route.name === 'Profile') iconName = 'user';
+        if (route.name === 'Profile' || route.name === 'MemberProfile') iconName = 'user';
 
         return (
           <TouchableOpacity
@@ -74,16 +80,30 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 }
 
 export const AppTabs = () => {
+  const user = useAppSelector((state) => state.auth.user);
+  const role = user?.role || 'user'; 
+
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false }} 
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Products" component={ProductListScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
-      <Tab.Screen name="Services" component={ServicesScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      {role === 'member' ? (
+        // MEMBER TABS
+        <>
+          <Tab.Screen name="MemberHome" component={MemberDashboardScreen} />
+          <Tab.Screen name="MemberProfile" component={MemberProfileScreen} />
+        </>
+      ) : (
+        // USER TABS
+        <>
+          <Tab.Screen name="Home" component={HomeScreen} />
+          <Tab.Screen name="Products" component={ProductListScreen} />
+          <Tab.Screen name="Cart" component={CartScreen} />
+          <Tab.Screen name="Services" component={ServicesScreen} />
+          <Tab.Screen name="Profile" component={ProfileScreen} />
+        </>
+      )}
     </Tab.Navigator>
   );
 };
@@ -91,7 +111,7 @@ export const AppTabs = () => {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF', // Strict pure white
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -122,6 +142,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     borderWidth: 4,
-    borderColor: colors.white,
+    borderColor: '#FFFFFF',
   },
 });

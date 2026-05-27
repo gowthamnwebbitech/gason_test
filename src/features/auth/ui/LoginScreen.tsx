@@ -13,70 +13,61 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { Input } from '@/components/Input';
 import { ButtonPrimary } from '@/components/ButtonPrimary';
-import { colors, spacing, typography, radius } from '@/theme';
+import { colors, spacing, typography, radius, shadows } from '@/theme';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { loginUser } from '../store';
+import { loginUser } from '../store/authThunks';
+import { Role } from '../store/authTypes';
 
 interface FormErrors {
-  phone?: string;
+  identifier?: string;
   password?: string;
 }
 
 export const LoginScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { isLoading, error: globalError } = useAppSelector(
-    (state: any) => state.auth,
-  );
+  const { isLoading, error: globalError } = useAppSelector((state: any) => state.auth);
 
-  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<Role>('user');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // --- STAGGERED PREMIUM ANIMATIONS ---
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const formAnim = useRef(new Animated.Value(0)).current;
-  const footerAnim = useRef(new Animated.Value(0)).current;
+  // --- SMOOTH ANIMATIONS ---
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current; // Reduced slide distance
 
   useEffect(() => {
-    Animated.stagger(150, [
-      Animated.timing(headerAnim, {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 700,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
-      Animated.timing(formAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }),
-      Animated.timing(footerAnim, {
-        toValue: 1,
-        duration: 800,
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 700,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
     ]).start();
-  }, [headerAnim, formAnim, footerAnim]);
+  }, [fadeAnim, slideAnim]);
 
-  const getTransform = (anim: Animated.Value) => {
-    return [
-      {
-        translateY: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [40, 0],
-        }),
-      },
-    ];
+  const handleRoleSwitch = (selectedRole: Role) => {
+    if (role === selectedRole) return;
+    setRole(selectedRole);
+    setIdentifier('');
+    setPassword('');
+    setErrors({});
+    setApiError(null);
   };
 
   const validateForm = (): boolean => {
@@ -84,17 +75,19 @@ export const LoginScreen = ({ navigation }: any) => {
     let isValid = true;
     let newErrors: FormErrors = {};
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phone.trim()) {
-      newErrors.phone = 'Mobile Number is required.';
+    if (!identifier.trim()) {
+      newErrors.identifier = role === 'user' ? 'Mobile Number is required' : 'Member ID is required';
       isValid = false;
-    } else if (!phoneRegex.test(phone)) {
-      newErrors.phone = 'Please enter a valid 10-digit mobile number.';
-      isValid = false;
+    } else if (role === 'user') {
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(identifier)) {
+        newErrors.identifier = 'Enter a valid 10-digit mobile number';
+        isValid = false;
+      }
     }
 
     if (!password.trim()) {
-      newErrors.password = 'Password is required.';
+      newErrors.password = 'Password is required';
       isValid = false;
     }
 
@@ -106,24 +99,20 @@ export const LoginScreen = ({ navigation }: any) => {
     if (validateForm()) {
       setApiError(null);
 
-      dispatch(loginUser({ phone: phone.trim(), password }))
+      dispatch(loginUser({ identifier: identifier.trim(), password, role }))
         .unwrap()
         .then(() => {
           setIsSuccess(true);
           Toast.show({
             type: 'success',
-            text1: 'Login Successful',
-            text2: 'Welcome back to Gason!',
+            text1: 'Authentication Successful',
+            text2: role === 'member' ? 'Securely accessing Member Portal...' : 'Welcome back to Gason!',
           });
         })
         .catch((err: any) => {
-          const errMsg = err || 'Incorrect mobile number or password.';
+          const errMsg = err || 'Incorrect credentials. Please try again.';
           setApiError(errMsg);
-          Toast.show({
-            type: 'error',
-            text1: 'Login Failed',
-            text2: errMsg,
-          });
+          Toast.show({ type: 'error', text1: 'Sign In Failed', text2: errMsg });
         });
     }
   };
@@ -137,130 +126,151 @@ export const LoginScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.main}>
-      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
+      {/* SUBTLE PREMIUM GLOW ORBS */}
       <LinearGradient
-        colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
+        colors={['#4f46e510', 'rgba(255,255,255,0)']}
         style={styles.glowAccentTop}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
       <LinearGradient
-        colors={[colors.primary + '0A', 'rgba(255,255,255,0)']}
+        colors={['#8b5cf608', 'rgba(255,255,255,0)']}
         style={styles.glowAccentBottom}
         start={{ x: 1, y: 1 }}
         end={{ x: 0, y: 0 }}
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xl) }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          bounces={false}
         >
-          {/* 1. ANIMATED HEADER */}
-          <Animated.View style={{ opacity: headerAnim, transform: getTransform(headerAnim) }}>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], flex: 1 }}>
+            
+            {/* 1. COMPACT HEADER */}
             <View style={styles.header}>
-              <View style={styles.badgeContainer}>
-                <View style={styles.badgeDot} />
-                <Text style={styles.badgeText}>Welcome Back</Text>
+              <View style={[styles.badge, role === 'member' ? styles.badgeMember : styles.badgeUser]}>
+                <Icon name={role === 'member' ? 'briefcase' : 'user'} size={12} color={role === 'member' ? colors.info : colors.primary} />
+                <Text style={[styles.badgeText, { color: role === 'member' ? colors.info : colors.primary }]}>
+                  {role === 'member' ? 'Partner Access' : 'Customer Access'}
+                </Text>
               </View>
-              <Text style={styles.title}>Sign in to{'\n'}your account</Text>
-              <Text style={styles.subtitle}>Enter your details to access your dashboard.</Text>
+              <Text style={styles.title}>
+                {role === 'user' ? 'Sign in to Gason' : 'Member Portal'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {role === 'user' 
+                  ? 'Enter your mobile number and password.' 
+                  : 'Enter your authorized Member ID.'}
+              </Text>
             </View>
-          </Animated.View>
 
-          {/* 2. ANIMATED FORM */}
-          <Animated.View style={{ opacity: formAnim, transform: getTransform(formAnim), flex: 1 }}>
+            {/* 2. SLIM SEGMENTED CONTROL */}
+            <View style={styles.segmentedControl}>
+              <TouchableOpacity
+                style={[styles.segmentBtn, role === 'user' && styles.segmentBtnActive]}
+                onPress={() => handleRoleSwitch('user')}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.segmentText, role === 'user' && styles.segmentTextActive]}>User</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentBtn, role === 'member' && styles.segmentBtnActive]}
+                onPress={() => handleRoleSwitch('member')}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.segmentText, role === 'member' && styles.segmentTextActive]}>Member</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 3. TIGHT INPUT FORM */}
             <View style={styles.form}>
-              <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>{role === 'user' ? 'Mobile Number' : 'Member ID'}</Text>
                 <Input
-                  placeholder="Mobile Number"
-                  keyboardType="phone-pad"
-                  value={phone}
+                  placeholder={role === 'user' ? "e.g. 9876543210" : "e.g. GSN001"}
+                  keyboardType={role === 'user' ? "phone-pad" : "default"}
+                  autoCapitalize={role === 'member' ? "characters" : "none"}
+                  value={identifier}
                   onChangeText={text => {
-                    setPhone(text.replace(/[^0-9]/g, ''));
-                    clearError('phone');
+                    setIdentifier(role === 'user' ? text.replace(/[^0-9]/g, '') : text);
+                    clearError('identifier');
                   }}
                   editable={!isLoading && !isSuccess}
-                  maxLength={10}
-                  hasError={!!errors.phone}
+                  maxLength={role === 'user' ? 10 : 20}
+                  hasError={!!errors.identifier}
                 />
-                {errors.phone && (
-                  <Text style={styles.fieldErrorText}>{errors.phone}</Text>
-                )}
+                {errors.identifier && <Text style={styles.fieldErrorText}>{errors.identifier}</Text>}
               </View>
 
-              <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Password</Text>
                 <Input
-                  placeholder="Password"
+                  placeholder="Enter your password"
                   isPassword={true}
                   value={password}
-                  onChangeText={text => {
-                    setPassword(text);
-                    clearError('password');
-                  }}
+                  onChangeText={text => { setPassword(text); clearError('password'); }}
                   editable={!isLoading && !isSuccess}
                   hasError={!!errors.password}
                 />
-                {errors.password && (
-                  <Text style={styles.fieldErrorText}>{errors.password}</Text>
-                )}
+                {errors.password && <Text style={styles.fieldErrorText}>{errors.password}</Text>}
               </View>
 
+              {/* DYNAMIC FORGOT PASSWORD */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword', { role })}
+                style={styles.forgotBtn}
+                disabled={isLoading || isSuccess}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.forgotText}>
+                  {role === 'member' ? 'Forgot Member Password?' : 'Forgot Password?'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* GLOBAL ERROR DISPLAY */}
               {displayGlobalError ? (
                 <View style={styles.errorContainer}>
-                  <Icon name="alert-circle" size={16} color={colors.error} style={{ marginRight: spacing.sm }} />
+                  <Icon name="alert-triangle" size={16} color={colors.error} />
                   <Text style={styles.errorText}>{displayGlobalError}</Text>
                 </View>
               ) : null}
-
-              <TouchableOpacity
-                onPress={() => navigation.navigate('ForgotPassword')}
-                style={styles.forgotBtn}
-                disabled={isLoading || isSuccess}
-                activeOpacity={0.6}
-              >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
             </View>
-          </Animated.View>
 
-          {/* 3. ANIMATED FOOTER */}
-          <Animated.View style={{ opacity: footerAnim, transform: getTransform(footerAnim) }}>
-            <View style={styles.bottomSection}>
+            {/* 4. ACTIONS & FOOTER */}
+            <View style={styles.footerContainer}>
               <ButtonPrimary
-                title={
-                  isSuccess
-                    ? 'Welcome Back! ✓'
-                    : isLoading
-                    ? 'Signing in...'
-                    : 'Sign In'
-                }
+                title={isSuccess ? 'Success ✓' : isLoading ? 'Authenticating...' : 'Sign In'}
                 onPress={handleSignIn}
                 disabled={isLoading || isSuccess}
               />
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                  Don’t have an account?{' '}
-                </Text>
-                <TouchableOpacity 
-                  onPress={() => !(isLoading || isSuccess) && navigation.navigate('Signup')}
-                  disabled={isLoading || isSuccess}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.link, (isLoading || isSuccess) && styles.disabledLink]}>
-                    Create one
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              
+              {/* SIGN UP - STRICTLY FOR USERS ONLY */}
+              {role === 'user' ? (
+                <View style={styles.signupPrompt}>
+                  <Text style={styles.signupText}>New to Gason? </Text>
+                  <TouchableOpacity 
+                    onPress={() => !(isLoading || isSuccess) && navigation.navigate('Signup')}
+                    disabled={isLoading || isSuccess}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.signupLink}>Create an account</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.signupPrompt}>
+                  <Text style={[styles.signupText, { color: 'transparent' }]}>-</Text>
+                </View>
+              )}
             </View>
+
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -271,126 +281,169 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // Strict pure white background constraint met
+    backgroundColor: '#FFFFFF', 
   },
+  
+  // Decorative Glows
   glowAccentTop: {
     position: 'absolute',
-    top: -150,
+    top: -100,
     right: -100,
-    width: 400,
-    height: 400,
+    width: 350,
+    height: 350,
     borderRadius: radius.full,
   },
   glowAccentBottom: {
     position: 'absolute',
-    bottom: -200,
-    left: -150,
-    width: 450,
-    height: 450,
+    bottom: -150,
+    left: -100,
+    width: 350,
+    height: 350,
     borderRadius: radius.full,
   },
-  keyboardView: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+
+  keyboardView: { 
+    flex: 1 
   },
+  scrollContent: { 
+    flexGrow: 1, 
+    paddingHorizontal: spacing.xl, 
+  },
+  
+  // Header
   header: { 
-    marginBottom: spacing.xxl 
+    marginBottom: spacing.lg, // Reduced from xxl
   },
-  badgeContainer: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight, 
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.xl,
     alignSelf: 'flex-start',
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4, // Reduced
+    borderRadius: radius.full,
+    marginBottom: spacing.sm, // Reduced
   },
-  badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-    marginRight: spacing.xs,
-  },
+  badgeUser: { backgroundColor: colors.primaryLight },
+  badgeMember: { backgroundColor: colors.info + '15' },
   badgeText: {
     ...typography.caption,
-    color: colors.primaryDark,
     fontWeight: '700',
-    letterSpacing: 0.5,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginLeft: 4,
+    fontSize: 11, // Slightly smaller
   },
   title: { 
-    ...typography.screenTitle,
-    fontSize: 36, 
-    lineHeight: 44,
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: spacing.xs,
+    ...typography.screenTitle, 
+    fontSize: 30, // Reduced from 34
+    lineHeight: 36, // Reduced from 42
+    color: colors.textPrimary, 
+    letterSpacing: -0.5, 
+    marginBottom: 4,
   },
-  subtitle: {
-    ...typography.bodyLarge,
-    color: colors.textMuted,
+  subtitle: { 
+    ...typography.body, // Used body instead of bodyLarge
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
-  form: { 
-    gap: spacing.md,
-  },
-  inputGroup: { 
-    marginBottom: spacing.xs 
-  },
-  fieldErrorText: {
-    ...typography.caption, 
-    color: colors.error, 
-    fontWeight: '500',
-    marginTop: spacing.xs,
-    marginLeft: spacing.xs,
-  },
-  errorContainer: {
+  
+  // Segmented Control
+  segmentedControl: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF5F5',
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: '#FFE1E1',
-    marginTop: spacing.xs,
+    backgroundColor: '#F5F5F7', 
+    borderRadius: radius.md, // Sharper radius
+    padding: 3, // Thinner padding
+    marginBottom: spacing.xl, // Reduced from xxl
   },
-  errorText: {
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 8, // Reduced from 12
+    alignItems: 'center',
+    borderRadius: radius.sm,
+  },
+  segmentBtnActive: {
+    backgroundColor: '#FFFFFF', 
+    ...shadows.button,
+  },
+  segmentText: {
+    ...typography.body, // Reduced to standard body size
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  segmentTextActive: {
+    color: colors.textPrimary,
+  },
+
+  // Form Inputs
+  form: { 
+    marginBottom: spacing.lg, // Reduced from xxl
+  },
+  inputWrapper: {
+    marginBottom: spacing.md, // Reduced from lg
+  },
+  inputLabel: {
+    ...typography.caption, // Reduced from body
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4, // Tighter margin
+    marginLeft: 2,
+  },
+  fieldErrorText: { 
     ...typography.caption, 
     color: colors.error, 
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '500', 
+    marginTop: 4, 
+    marginLeft: spacing.xs 
   },
   forgotBtn: { 
-    alignSelf: 'flex-start', 
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
+    alignSelf: 'flex-end', 
+    paddingVertical: 4, // Reduced
+    marginTop: -4, // Pulled slightly closer to the password field
   },
   forgotText: { 
-    ...typography.bodyLarge, 
-    color: colors.textPrimary, 
-    fontWeight: '700',
+    ...typography.caption, // Reduced from body
+    color: colors.primary, 
+    fontWeight: '700' 
   },
-  bottomSection: { 
-    gap: spacing.xl, 
-    marginTop: spacing.xxl 
+  
+  // Errors
+  errorContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FFF5F5', 
+    padding: spacing.sm, // Reduced from md
+    borderRadius: radius.sm, // Sharper radius
+    borderWidth: 1, 
+    borderColor: '#FFE1E1', 
+    marginTop: spacing.xs 
   },
-  footer: { 
-    flexDirection: 'row',
-    alignItems: 'center',
+  errorText: { 
+    ...typography.caption, 
+    color: colors.error, 
+    fontWeight: '600', 
+    flex: 1,
+    marginLeft: spacing.xs,
+  },
+  
+  // Footer
+  footerContainer: {
+    marginTop: 'auto',
+    paddingTop: spacing.md,
+  },
+  signupPrompt: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
     justifyContent: 'center',
+    marginTop: spacing.lg, // Reduced from xl
   },
-  footerText: { 
-    ...typography.body, 
+  signupText: { 
+    ...typography.body, // Reduced from bodyLarge
     color: colors.textSecondary 
   },
-  link: { 
+  signupLink: { 
     ...typography.body, 
     fontWeight: '700', 
-    color: colors.primary,
-  },
-  disabledLink: { 
-    color: colors.textMuted 
+    color: colors.textPrimary, 
+    textDecorationLine: 'underline',
   },
 });

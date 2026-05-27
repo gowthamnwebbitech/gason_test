@@ -4,7 +4,7 @@ import { getAccessToken, clearAllTokens } from '@/utils/storage';
 import { store } from '@/store'; 
 import { forceLogout } from '@/features/auth/store'; 
 
-const BASE_URL = Config.API_BASE_URL || 'https://gason.co.in/demo/api/';
+const BASE_URL = Config.API_BASE_URL || 'https://gason.co.in/demo/api';
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,

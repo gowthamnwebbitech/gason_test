@@ -128,7 +128,11 @@ export const OTPScreen = ({ navigation, route }: any) => {
             position: 'top',
           });
           
-          navigation.navigate('Login'); 
+          // FIX 1: Clear the OTP state so the useEffect cannot re-trigger
+          setOtp(['', '', '', '', '', '']); 
+          
+          // FIX 2: Use replace to destroy this screen from the background stack
+          navigation.replace('Login'); 
         })
         .catch((err: any) => {
           const errorMessage = err?.message || err?.data?.message || (typeof err === 'string' ? err : 'The verification code is incorrect. Please try again.');
@@ -146,15 +150,19 @@ export const OTPScreen = ({ navigation, route }: any) => {
           inputs.current[0]?.focus();
         });
     } else if (type === 'forgot') {
-      navigation.navigate('NewPassword', { phone, otp: otpString });
+      // FIX 1 & 2 applied here for the forgot password flow
+      setOtp(['', '', '', '', '', '']);
+      navigation.replace('NewPassword', { phone, otp: otpString });
     }
   }, [otp, isLoading, type, dispatch, userId, navigation, phone]);
 
+  // FIX 3: Auto-submit effect strictly watches isOtpComplete
   useEffect(() => {
     if (isOtpComplete && !isLoading) {
       handleVerify();
     }
-  }, [isOtpComplete, isLoading, handleVerify]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOtpComplete]); 
 
   const handleResend = () => {
     if (!canResend) return;
@@ -340,7 +348,7 @@ export const OTPScreen = ({ navigation, route }: any) => {
               <ButtonPrimary 
                 title={isLoading ? "Verifying..." : "Verify & Continue"} 
                 onPress={handleVerify}
-                disabled={isLoading}
+                disabled={isLoading || !isOtpComplete}
               />
             </View>
           </Animated.View>
@@ -353,10 +361,8 @@ export const OTPScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // STRICT WHITE BACKGROUND MAINTAINED
+    backgroundColor: '#FFFFFF', 
   },
-  
-  // --- DECORATIVE BACKGROUND ELEMENTS ---
   glowAccentTop: {
     position: 'absolute',
     top: -150,
@@ -373,7 +379,6 @@ const styles = StyleSheet.create({
     height: 450,
     borderRadius: radius.full,
   },
-
   keyboardView: { flex: 1 },
   scrollContent: { 
     flexGrow: 1, 
@@ -382,8 +387,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxl 
   },
-  
-  // --- MODERN HEADER STYLING ---
   header: { 
     marginBottom: spacing.xl 
   },
@@ -428,8 +431,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
   },
-  
-  // --- OTP SECTION STYLING ---
   otpSection: { 
     alignItems: 'center', 
     marginTop: spacing.md 
@@ -453,7 +454,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, 
     textAlign: 'center', 
     fontSize: 26, 
-    fontFamily: 'Poppins-SemiBold', // Use your bold font if available
+    fontFamily: 'Poppins-SemiBold',
     fontWeight: '700',
     color: colors.textPrimary, 
     backgroundColor: '#FFFFFF',
@@ -463,15 +464,13 @@ const styles = StyleSheet.create({
   otpInputActive: { 
     borderColor: colors.primary, 
     borderWidth: 2,
-    backgroundColor: colors.primary + '05', // Extremely faint primary tint
+    backgroundColor: colors.primary + '05',
   },
   otpInputError: { 
     borderColor: colors.error || '#FF3B30', 
     borderWidth: 2, 
     backgroundColor: '#FFF5F5'
   }, 
-  
-  // --- ERROR STYLING ---
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -489,8 +488,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  
-  // --- RESEND TIMER STYLING ---
   resendContainer: { 
     marginTop: spacing.xs,
     alignItems: 'center',
@@ -511,8 +508,6 @@ const styles = StyleSheet.create({
     fontWeight: '700', 
     color: colors.primary 
   }, 
-  
-  // --- FOOTER STYLING ---
   footer: { 
     marginTop: spacing.xl 
   },

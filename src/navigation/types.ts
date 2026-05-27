@@ -25,6 +25,8 @@ export type AppTabsParamList = {
   Cart: undefined;
   Services: undefined;
   Profile: undefined;
+  MemberHome: undefined;
+  MemberProfile: undefined;
 };
 
 // 3. The Main App Stack (Holds the Tabs + Full-screen overlays like ProductDetail)

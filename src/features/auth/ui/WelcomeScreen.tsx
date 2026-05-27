@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, StatusBar, Animated, Easing } from 'react-native';
+import { View, Text, Image, StyleSheet, StatusBar, Animated, Easing, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 import { ButtonPrimary } from '@/components/ButtonPrimary';
 import { spacing, typography, colors, radius, moderateScale } from '@/theme';
 import { images } from '@/assets';
 import { useAppDispatch } from '@/store';
 import { completeOnboarding } from '../store';
+
+// Get screen height for responsive background elements
+const { height } = Dimensions.get('window');
 
 export const WelcomeScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
@@ -14,28 +16,37 @@ export const WelcomeScreen = ({ navigation }: any) => {
 
   // Animation Refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current; // New: Slide up from 30px
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade-in animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
+    // Parallel entry animations for a smoother, premium feel
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      })
+    ]).start();
 
     // Infinite floating animation for the logo
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(floatAnim, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 1, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 2500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     ).start();
-  }, []);
+  }, [fadeAnim, slideAnim, floatAnim]);
 
   const floatInterpolate = floatAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -20],
+    outputRange: [0, -15], // Slightly gentler float
   });
 
   const handleGetStarted = async () => {
@@ -47,31 +58,45 @@ export const WelcomeScreen = ({ navigation }: any) => {
     <View style={styles.main}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
-      {/* CREATIVE BACKGROUND ORBS */}
+      {/* Subdued Decorative Orbs - Kept ultra-minimal for the clean white aesthetic */}
       <View style={[styles.orb, styles.orbTop]} />
       <View style={[styles.orb, styles.orbBottom]} />
 
-      <View style={[styles.content, { marginTop: insets.top }]}>
-        {/* Floating Animated Logo */}
-        <Animated.View style={{ transform: [{ translateY: floatInterpolate }] }}>
-          <Image source={images.logo} style={styles.logo} />
-        </Animated.View>
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         
-        <Animated.View style={[styles.textWrapper, { opacity: fadeAnim }]}>
-          <Text style={styles.subtitle}>Welcome to</Text>
-          <Text style={styles.title}>GASON</Text>
-          <Text style={styles.brandExtension}>INDIA LIMITED</Text>
-          <Text style={styles.desc}>Precision cooking technology for the modern Indian home.</Text>
+        {/* Top Section: Logo */}
+        <View style={styles.logoContainer}>
+          <Animated.View style={{ transform: [{ translateY: floatInterpolate }] }}>
+            <Image source={images.logo} style={styles.logo} />
+          </Animated.View>
+        </View>
+
+        {/* Bottom Section: Text & Button */}
+        <Animated.View 
+          style={[
+            styles.bottomContent, 
+            { 
+              opacity: fadeAnim, 
+              transform: [{ translateY: slideAnim }] // Apply slide animation
+            }
+          ]}
+        >
+          <View style={styles.textWrapper}>
+            <Text style={styles.subtitle}>Welcome to</Text>
+            <Text style={styles.title}>GASON</Text>
+            <Text style={styles.brandExtension}>INDIA LIMITED</Text>
+            <Text style={styles.desc}>Precision cooking technology for the modern Indian home.</Text>
+          </View>
+
+          <View style={styles.footer}>
+            <ButtonPrimary
+              title="Get Started"
+              onPress={handleGetStarted}
+              style={styles.button}
+            />
+          </View>
         </Animated.View>
       </View>
-
-      <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <ButtonPrimary
-          title="Get Started"
-          onPress={handleGetStarted}
-          style={styles.button}
-        />
-      </Animated.View>
     </View>
   );
 };
@@ -79,82 +104,92 @@ export const WelcomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF', // Enforcing the crisp white background
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'space-between', // Pushes logo up and text/button down
   },
   orb: {
     position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.5,
+    width: height * 0.4,
+    height: height * 0.4,
+    borderRadius: height * 0.2,
+    opacity: 0.3,
   },
   orbTop: {
-    top: -50,
-    right: -100,
-    backgroundColor: colors.primary + '10',
+    top: -height * 0.1,
+    right: -height * 0.1,
+    backgroundColor: colors.primary + '08', // Faint hex transparency
   },
   orbBottom: {
-    bottom: -50,
-    left: -100,
-    backgroundColor: '#F0F0F0',
+    bottom: -height * 0.1,
+    left: -height * 0.1,
+    backgroundColor: '#F8F8F8', // Barely visible against the white
   },
-  content: { 
-    flex: 1, 
-    alignItems: 'center', 
+  logoContainer: {
+    flex: 1.2, // Gives slightly more room to the top half
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
   },
   logo: { 
-    width: moderateScale(260), 
-    height: moderateScale(260), 
+    width: moderateScale(220), // Scaled down from 260 to prevent overlap on small devices
+    height: moderateScale(220), 
     resizeMode: 'contain',
-    marginBottom: spacing.md,
+  },
+  bottomContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
   },
   textWrapper: {
     alignItems: 'center',
+    marginBottom: spacing.xxl, // Replaces rigid footer padding
   },
   subtitle: {
     ...typography.body,
     fontSize: moderateScale(12),
-    letterSpacing: 6,
+    letterSpacing: 4,
     textTransform: 'uppercase',
     color: colors.textMuted,
     marginBottom: spacing.xs,
   },
   title: { 
     ...typography.screenTitle,
-    fontSize: moderateScale(56),
+    fontSize: moderateScale(48), // Adjusted down slightly so it doesn't break to a new line
     fontFamily: 'Poppins-Bold',
-    letterSpacing: -2,
+    letterSpacing: -1.5,
     color: colors.textPrimary,
+    lineHeight: moderateScale(56),
   },
   brandExtension: {
     ...typography.bodyLarge,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(13),
     fontFamily: 'Poppins-SemiBold',
-    letterSpacing: 8,
+    letterSpacing: 6,
     color: colors.primary,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   desc: {
     ...typography.body,
     fontSize: moderateScale(15),
     textAlign: 'center',
     color: colors.textSecondary,
-    maxWidth: '85%',
+    paddingHorizontal: spacing.md,
     lineHeight: 24,
   },
   footer: { 
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    width: '100%',
+    paddingTop: spacing.sm,
   },
   button: { 
     height: 60,
-    borderRadius: radius.full, // Ultra-rounded pill shape
-    backgroundColor: colors.black,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    borderRadius: radius.full, 
+    backgroundColor: colors.textPrimary, // Typically a stark dark color looks best on white
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5, // Android shadow support
   },
 });

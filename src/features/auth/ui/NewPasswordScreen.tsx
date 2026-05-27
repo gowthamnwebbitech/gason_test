@@ -47,22 +47,23 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(150, [
+    // Sped up animations (duration: 600, stagger: 100) for a snappier, compact feel
+    Animated.stagger(100, [
       Animated.timing(headerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(formAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(footerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
@@ -74,7 +75,7 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
       {
         translateY: anim.interpolate({
           inputRange: [0, 1],
-          outputRange: [40, 0],
+          outputRange: [20, 0],
         }),
       },
     ];
@@ -157,7 +158,10 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+            { 
+              paddingTop: Math.max(insets.top + 16, 24), 
+              paddingBottom: Math.max(insets.bottom + 16, 24) 
+            }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -170,7 +174,7 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
                 <View style={styles.badgeDot} />
                 <Text style={styles.badgeText}>Secure Account</Text>
               </View>
-              <Text style={styles.title}>Create new{'\n'}password</Text>
+              <Text style={styles.title}>Create new password</Text>
               <Text style={styles.subtitle}>
                 Your new password must be different from previous passwords to ensure security.
               </Text>
@@ -222,7 +226,7 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
 
               {displayGlobalError ? (
                 <View style={styles.errorContainer}>
-                  <Icon name="alert-circle" size={16} color={colors.error || '#FF3B30'} style={{ marginRight: spacing.sm }} />
+                  <Icon name="alert-circle" size={14} color={colors.error || '#FF3B30'} style={{ marginRight: 6 }} />
                   <Text style={styles.errorText}>{displayGlobalError}</Text>
                 </View>
               ) : null}
@@ -248,56 +252,52 @@ export const NewPasswordScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // STRICT WHITE BACKGROUND MAINTAINED
+    backgroundColor: '#FFFFFF',
   },
-  
-  // --- DECORATIVE BACKGROUND ELEMENTS ---
   glowAccentTop: {
     position: 'absolute',
     top: -150,
     right: -100,
-    width: 400,
-    height: 400,
+    width: 300, // Reduced
+    height: 300, 
     borderRadius: radius.full,
   },
   glowAccentBottom: {
     position: 'absolute',
-    bottom: -200,
+    bottom: -150,
     left: -150,
-    width: 450,
-    height: 450,
+    width: 300, // Reduced
+    height: 300,
     borderRadius: radius.full,
   },
-
   keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20, // Tightened padding
   },
-  
-  // --- MODERN HEADER STYLING ---
   header: { 
-    marginBottom: spacing.xxl 
+    marginBottom: 24, // Reduced from spacing.xxl
   },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primaryLight || '#F9FAFB', 
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.xl,
     alignSelf: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: 12, // Tighter margin
   },
   badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.primary,
-    marginRight: spacing.xs,
+    marginRight: 6,
   },
   badgeText: {
     ...typography.caption,
+    fontSize: 10, // Scaled down
     color: colors.primaryDark || colors.textSecondary,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -305,60 +305,58 @@ const styles = StyleSheet.create({
   },
   title: { 
     ...typography.screenTitle,
-    fontSize: 36, 
-    lineHeight: 44,
+    fontSize: 28, // Reduced from 36
+    lineHeight: 34, // Reduced from 44
     color: colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   subtitle: {
     ...typography.bodyLarge,
+    fontSize: 14, // Scaled down
     color: colors.textMuted,
-    lineHeight: 24,
+    lineHeight: 20,
   },
-  
-  // --- FORM STYLING ---
   form: { 
-    gap: spacing.md 
+    gap: 12, // Reduced from spacing.md
   },
   inputGroup: { 
-    marginBottom: spacing.xs 
+    marginBottom: 4, 
   },
-  
-  // --- HELPER & ERROR STYLING ---
   validationText: {
     ...typography.caption,
+    fontSize: 11, // Compressed helper text
     color: colors.textMuted,
-    lineHeight: 18,
+    lineHeight: 16,
     paddingHorizontal: 4,
     marginTop: 4,
   },
   fieldErrorText: {
-    ...typography.caption, // Spread typography first
-    color: colors.error || '#FF3B30', // Apply priority color
+    ...typography.caption, 
+    fontSize: 11, // Compressed error text
+    color: colors.error || '#FF3B30', 
     fontWeight: '500',
-    marginTop: 6,
+    marginTop: 4,
     marginLeft: 4,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF5F5',
-    padding: spacing.md,
+    padding: 10, // Tighter padding
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: '#FFE1E1',
-    marginTop: spacing.xs,
+    marginTop: 4,
   },
   errorText: {
     ...typography.caption, 
+    fontSize: 12, // Scaled down
     color: colors.error || '#FF3B30', 
     fontWeight: '600',
     flex: 1,
   },
-  
-  // --- FOOTER STYLING ---
   footer: { 
-    marginTop: spacing.xxl 
+    marginTop: 24, // Pulled up significantly from spacing.xxl
   },
 });

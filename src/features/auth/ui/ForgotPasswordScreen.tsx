@@ -27,8 +27,6 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
   const { isLoading } = useAppSelector((state: any) => state.auth);
 
   const [phone, setPhone] = useState('');
-
-  // Separated errors: one for the input field, one for the backend response
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -38,22 +36,23 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(150, [
+    // Sped up animations (duration: 600, stagger: 100) for a snappier feel
+    Animated.stagger(100, [
       Animated.timing(headerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(formAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
       Animated.timing(footerAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
@@ -65,16 +64,15 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       {
         translateY: anim.interpolate({
           inputRange: [0, 1],
-          outputRange: [40, 0],
+          outputRange: [20, 0], // Reduced movement range for tighter feel
         }),
       },
     ];
   };
 
-  // Field-level Validation Engine
   const validateForm = (): boolean => {
     Keyboard.dismiss();
-    setApiError(null); // Clear previous API errors
+    setApiError(null);
 
     const phoneRegex = /^[0-9]{10}$/;
 
@@ -103,7 +101,6 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
           navigation.navigate('OTP', { type: 'forgot', phone: phone.trim() });
         })
         .catch((err: any) => {
-          // Parse API error
           const errMsg =
             err?.message ||
             err?.data?.message ||
@@ -122,7 +119,6 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.main}>
-      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
       <LinearGradient
         colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
         style={styles.glowAccentTop}
@@ -143,7 +139,10 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + spacing.xl, paddingBottom: Math.max(insets.bottom, spacing.xxl) }
+            { 
+              paddingTop: Math.max(insets.top + 16, 24), // Tighter top padding
+              paddingBottom: Math.max(insets.bottom + 16, 24) 
+            }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -156,9 +155,9 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
                 <View style={styles.badgeDot} />
                 <Text style={styles.badgeText}>Reset Password</Text>
               </View>
-              <Text style={styles.title}>Forgot your{'\n'}password?</Text>
+              <Text style={styles.title}>Forgot password?</Text>
               <Text style={styles.subtitle}>
-                Don't worry! Enter your phone number so we can send you an OTP to reset it.
+                Enter your phone number and we'll send an OTP to reset it.
               </Text>
             </View>
           </Animated.View>
@@ -178,18 +177,16 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
                   }}
                   maxLength={10}
                   editable={!isLoading}
-                  hasError={!!phoneError} // Triggers red border on the input
+                  hasError={!!phoneError}
                 />
-                {/* Field-level error message */}
                 {phoneError && (
                   <Text style={styles.fieldErrorText}>{phoneError}</Text>
                 )}
               </View>
 
-              {/* Global / API error message */}
               {apiError && (
                 <View style={styles.errorContainer}>
-                  <Icon name="alert-circle" size={16} color={colors.error || '#FF3B30'} style={{ marginRight: spacing.sm }} />
+                  <Icon name="alert-circle" size={14} color={colors.error || '#FF3B30'} style={{ marginRight: 6 }} />
                   <Text style={styles.errorText}>{apiError}</Text>
                 </View>
               )}
@@ -216,56 +213,52 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   main: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // STRICT WHITE BACKGROUND MAINTAINED
+    backgroundColor: '#FFFFFF',
   },
-  
-  // --- DECORATIVE BACKGROUND ELEMENTS ---
   glowAccentTop: {
     position: 'absolute',
     top: -150,
     right: -100,
-    width: 400,
-    height: 400,
+    width: 300, // Reduced from 400
+    height: 300, 
     borderRadius: radius.full,
   },
   glowAccentBottom: {
     position: 'absolute',
-    bottom: -200,
+    bottom: -150,
     left: -150,
-    width: 450,
-    height: 450,
+    width: 300, // Reduced from 450
+    height: 300,
     borderRadius: radius.full,
   },
-
   keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20, // Strict, tighter padding
   },
-  
-  // --- MODERN HEADER STYLING ---
   header: { 
-    marginBottom: spacing.xxl 
+    marginBottom: 24, // Reduced dramatically
   },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primaryLight, 
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: radius.xl,
     alignSelf: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
   badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.primary,
-    marginRight: spacing.xs,
+    marginRight: 6,
   },
   badgeText: {
     ...typography.caption,
+    fontSize: 10, // Scaled down
     color: colors.primaryDark,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -273,51 +266,51 @@ const styles = StyleSheet.create({
   },
   title: { 
     ...typography.screenTitle,
-    fontSize: 36, 
-    lineHeight: 44,
+    fontSize: 28, // Reduced from 36
+    lineHeight: 34, // Reduced from 44
     color: colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   subtitle: {
     ...typography.bodyLarge,
+    fontSize: 14, // Scaled down
+    lineHeight: 20,
     color: colors.textMuted,
   },
-  
-  // --- FORM STYLING ---
-  form: { gap: spacing.md },
-
-  // --- ERROR STYLING ---
+  form: { 
+    gap: 12, // Tighter gap
+  },
   inputGroup: {
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   fieldErrorText: {
     ...typography.caption,
-    color: colors.error || '#FF3B30', // Spread typography first, color last
+    fontSize: 11,
+    color: colors.error || '#FF3B30',
     fontWeight: '500',
-    marginTop: 6,
+    marginTop: 4,
     marginLeft: 4,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF5F5',
-    padding: spacing.md,
+    padding: 10, // Tighter padding
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: '#FFE1E1',
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
+    marginTop: 4,
+    marginBottom: 4,
   },
   errorText: {
     ...typography.caption,
+    fontSize: 12, // Scaled down
     color: colors.error || '#FF3B30',
     fontWeight: '600',
     flex: 1,
   },
-
-  // --- FOOTER STYLING ---
   footer: { 
-    marginTop: spacing.xl 
+    marginTop: 24, // Pulled up significantly
   },
 });
