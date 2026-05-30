@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthStack } from './AuthStack';
 import { AppStack } from './AppStack';
+import { UpdateMemberScreen } from '@/features/auth/ui/UpdateMemberScreen';
 import { useAppSelector, useAppDispatch } from '@/store';
-import { initializeApp } from '@/features/auth/store';
+import { initializeApp } from '@/features/auth/store/authThunks';
 import { notificationService } from '@/services/NotificationService';
 import { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { navigate } from './navigationService'; 
 
+const Stack = createNativeStackNavigator();
+
 export const RootNavigator = () => {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, isAppReady, isFirstLaunch } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isAppReady, isFirstLaunch, user } = useAppSelector((state) => state.auth);
   
   const [pendingRoute, setPendingRoute] = useState<{ name: string; params?: any } | null>(null);
 
@@ -59,10 +63,26 @@ export const RootNavigator = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  // 1. Unauthenticated -> Show Auth Stack
+  if (!isAuthenticated || !user) {
     return <AuthStack isFirstLaunch={isFirstLaunch} />;
   }
 
+  // 2. STRICT GATEKEEPER: Check if Member ID is missing, empty, or literally "null"
+  const needsMemberIdUpdate = 
+    !user.member_id || 
+    String(user.member_id).trim() === '' || 
+    String(user.member_id).toLowerCase() === 'null';
+
+  if (needsMemberIdUpdate) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="UpdateMember" component={UpdateMemberScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  // 3. Fully Authenticated & Verified -> Load Main App Stack
   return <AppStack />; 
 };
 

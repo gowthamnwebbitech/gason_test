@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, User } from './authTypes';
-import { initializeApp, loginUser, completeOnboarding, logoutUser, signupUser } from './authThunks';
+import { initializeApp, loginUser, completeOnboarding, logoutUser, signupUser, updateMemberId } from './authThunks';
 
 const initialState: AuthState = {
   user: null,
@@ -26,8 +26,8 @@ const authSlice = createSlice({
       .addCase(initializeApp.fulfilled, (state, action) => {
         state.isAuthenticated = action.payload.isAuthenticated;
         state.isFirstLaunch = action.payload.isFirstLaunch;
-        state.user = action.payload.user; // ✅ REHYDRATE USER FROM STORAGE
-        state.isAppReady = true;          // ✅ UNLOCK APP RENDERING
+        state.user = action.payload.user;
+        state.isAppReady = true;
       })
       
       // --- LOGIN ---
@@ -38,9 +38,25 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload;      // ✅ SET NEW USER ON LOGIN
+        state.user = action.payload;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+      // --- UPDATE MEMBER ID (NEW) ---
+      .addCase(updateMemberId.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateMemberId.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.user) {
+          state.user.member_id = action.payload; 
+        }
+      })
+      .addCase(updateMemberId.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })

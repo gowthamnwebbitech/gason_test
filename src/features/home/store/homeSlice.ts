@@ -21,7 +21,7 @@ const homeSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchHomeData.pending, (state, action) => {
-        // If it's a pull-to-refresh, don't trigger the main loading spinner
+        // If it's a pull-to-refresh, don't trigger the main full-screen loading spinner
         if (action.meta.arg === true) {
           state.isRefreshing = true;
         } else {

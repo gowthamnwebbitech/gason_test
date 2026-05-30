@@ -28,6 +28,7 @@ interface FormErrors {
   email?: string;
   password?: string;
   terms?: string;
+  memberId?: string;
 }
 
 export const SignupScreen = ({ navigation }: any) => {
@@ -40,6 +41,7 @@ export const SignupScreen = ({ navigation }: any) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [memberId, setMemberId] = useState('');
   const [password, setPassword] = useState('');
   const [isAccepted, setIsAccepted] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -50,7 +52,6 @@ export const SignupScreen = ({ navigation }: any) => {
   const footerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Reduced stagger delay for a snappier, compact feel
     Animated.stagger(100, [
       Animated.timing(headerAnim, {
         toValue: 1,
@@ -78,7 +79,7 @@ export const SignupScreen = ({ navigation }: any) => {
       {
         translateY: anim.interpolate({
           inputRange: [0, 1],
-          outputRange: [20, 0], // Reduced movement range from 40 to 20
+          outputRange: [20, 0],
         }),
       },
     ];
@@ -97,6 +98,19 @@ export const SignupScreen = ({ navigation }: any) => {
       newErrors.phone = 'Valid 10-digit mobile number required.';
       isValid = false;
     }
+    
+    // REQUIRED ALPHANUMERIC MEMBER ID VALIDATION
+    if (!memberId.trim()) {
+      newErrors.memberId = 'Member ID is required.';
+      isValid = false;
+    } else if (memberId.trim().length < 4) {
+      newErrors.memberId = 'Member ID must be at least 4 characters.';
+      isValid = false;
+    } else if (!/^[A-Z0-9]+$/i.test(memberId.trim())) {
+      newErrors.memberId = 'Member ID must be alphanumeric (e.g., GSN001).';
+      isValid = false;
+    }
+
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = 'Valid email required.';
       isValid = false;
@@ -121,6 +135,7 @@ export const SignupScreen = ({ navigation }: any) => {
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          member_id: memberId.trim(),
           password,
         }),
       )
@@ -153,7 +168,6 @@ export const SignupScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.main}>
-      {/* ULTRA-SOFT BACKGROUND GRADIENT ORBS */}
       <LinearGradient
         colors={[colors.primary + '15', 'rgba(255,255,255,0)']}
         style={styles.glowAccentTop}
@@ -174,10 +188,10 @@ export const SignupScreen = ({ navigation }: any) => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { 
-              paddingTop: Math.max(insets.top + 10, 20), 
-              paddingBottom: Math.max(insets.bottom + 10, 20) 
-            }
+            {
+              paddingTop: Math.max(insets.top + 10, 20),
+              paddingBottom: Math.max(insets.bottom + 10, 20),
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -230,6 +244,25 @@ export const SignupScreen = ({ navigation }: any) => {
                 />
                 {errors.phone && (
                   <Text style={styles.fieldErrorText}>{errors.phone}</Text>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Input
+                  placeholder="Member ID (e.g. GSN001)"
+                  autoCapitalize="characters"
+                  value={memberId}
+                  onChangeText={t => {
+                    // Allows letters and numbers, removes spaces/special characters, forces uppercase
+                    setMemberId(t.replace(/[^A-Za-z0-9]/g, '').toUpperCase());
+                    clearError('memberId');
+                  }}
+                  editable={!isLoading}
+                  maxLength={15}
+                  hasError={!!errors.memberId}
+                />
+                {errors.memberId && (
+                  <Text style={styles.fieldErrorText}>{errors.memberId}</Text>
                 )}
               </View>
 
@@ -294,7 +327,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     ]}
                   >
                     {isAccepted && (
-                      <Icon name="check" size={10} color={colors.white} />
+                      <Icon name="check" size={10} color="#FFFFFF" />
                     )}
                   </View>
                   <Text style={styles.termsText}>
@@ -340,8 +373,8 @@ export const SignupScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  main: { 
-    flex: 1, 
+  main: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
   },
   glowAccentTop: {
@@ -363,20 +396,20 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20, // Tightened from spacing.lg
+    paddingHorizontal: 20,
   },
-  header: { 
-    marginBottom: 16, // Reduced from spacing.xl
+  header: {
+    marginBottom: 16,
   },
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight, 
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.xl,
     alignSelf: 'flex-start',
-    marginBottom: 8, // Tighter margin
+    marginBottom: 8,
   },
   badgeDot: {
     width: 5,
@@ -387,34 +420,34 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...typography.caption,
-    fontSize: 10, // Made slightly smaller
+    fontSize: 10,
     color: colors.primaryDark,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  title: { 
+  title: {
     ...typography.screenTitle,
-    fontSize: 26, // Reduced from 36
-    lineHeight: 32, // Reduced from 44
+    fontSize: 26,
+    lineHeight: 32,
     color: colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: 2, // Removed spacing.xs
+    marginBottom: 2,
   },
   subtitle: {
     ...typography.bodyLarge,
     fontSize: 14,
     color: colors.textMuted,
   },
-  form: { 
-    gap: 8, // Reduced dramatically from spacing.md
+  form: {
+    gap: 8,
   },
-  inputGroup: { 
-    marginBottom: 4, 
+  inputGroup: {
+    marginBottom: 4,
   },
   fieldErrorText: {
     ...typography.caption,
-    fontSize: 11, // Compressed error text
+    fontSize: 11,
     color: colors.error,
     fontWeight: '500',
     marginTop: 2,
@@ -424,7 +457,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF5F5',
-    padding: 8, // Smaller padding
+    padding: 8,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: '#FFE1E1',
@@ -445,53 +478,53 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   checkbox: {
-    width: 18, // Reduced from 22
-    height: 18, // Reduced from 22
+    width: 18,
+    height: 18,
     borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: colors.primary,
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: '#FFFFFF',
   },
-  checkboxActive: { 
-    backgroundColor: colors.primary 
+  checkboxActive: {
+    backgroundColor: colors.primary,
   },
   checkboxError: {
     borderColor: colors.error,
     backgroundColor: '#FFF5F5',
   },
-  termsText: { 
-    ...typography.caption, 
+  termsText: {
+    ...typography.caption,
     color: colors.textSecondary,
-    fontSize: 12, // Reduced from 14
+    fontSize: 12,
   },
-  termsBold: { 
-    fontWeight: '700', 
-    color: colors.textPrimary 
+  termsBold: {
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
-  bottomSection: { 
-    gap: 12, // Reduced from spacing.xl
-    marginTop: 16, // Reduced from spacing.xl
+  bottomSection: {
+    gap: 12,
+    marginTop: 16,
   },
-  footer: { 
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footerText: { 
-    ...typography.body, 
-    fontSize: 13, // Smaller footer text
-    color: colors.textSecondary 
-  },
-  link: { 
-    ...typography.body, 
+  footerText: {
+    ...typography.body,
     fontSize: 13,
-    fontWeight: '700', 
+    color: colors.textSecondary,
+  },
+  link: {
+    ...typography.body,
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
   },
-  disabledLink: { 
-    color: colors.textMuted 
+  disabledLink: {
+    color: colors.textMuted,
   },
 });

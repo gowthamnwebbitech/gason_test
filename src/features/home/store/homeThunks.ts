@@ -6,8 +6,9 @@ export const fetchHomeData = createAsyncThunk(
   'home/fetchHomeData',
   async (isRefresh: boolean = false, { rejectWithValue }) => {
     try {
-      const response = await apiService.get<{ success: boolean; message: string; data: HomeData }>(
-        '/member/dashboard'
+      const response = await apiService.get
+      (
+        '/customer/dashboard'
       );
       return response.data.data;
     } catch (error: any) {
